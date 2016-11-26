@@ -3,17 +3,17 @@ var client = new Client();
 
 var apiKey,apiPassword,storeName;
 
-function getStoreData(url,args,type,req) {
+function getStoreData(url,args,type,node) {
 	client.get(url, args, function (data, res) {
-			if(type == "customer") {
-				formCustomer(data.customers,req);
-			} else if (type == "product") {
-				formProduct(data.products,req);
-			} else {
-				formOrder(data.orders,req)
-			}
-    	}).on('error',function(err){
-        	console.log('something went wrong on the request', err.request.options);
+		if(type.toLowerCase() == "customer") {
+			formCustomer(data.customers,node);
+		} else if (type.toLowerCase() == "product") {
+			formProduct(data.products,node);
+		} else {
+			formOrder(data.orders,node)
+		}
+	}).on('error',function(err){
+    	console.log('Something went wrong on the request', err.request.options);
     });
 }
 
@@ -21,7 +21,7 @@ function b64EncodeUnicode(str) {
    	return new Buffer(str).toString('base64');
 }
 
-function formCustomer(dataArr, req) {
+function formCustomer(dataArr, node) {
 	var obj, resObj;
 	var resArr = [];
 	for(var i = 0; i < dataArr.length; i++) {
@@ -48,10 +48,10 @@ function formCustomer(dataArr, req) {
 		resObj.defaultAddress = addr1;
 		resArr[i] = resObj;
 		}
-		post(resArr, req);
+		post(resArr, node);
 	}
 
-function formOrder(dataArr, req) {
+function formOrder(dataArr, node) {
 	var obj, resObj;
 	var resArr = [];
 	for(var i = 0; i < dataArr.length; i++) {
@@ -65,6 +65,7 @@ function formOrder(dataArr, req) {
 		resObj.status = obj.financial_status;
 		resObj.name = obj.name;
 		resObj.customerId = obj.customer.id;
+		resObj.customerName = obj.customer.first_name + ' ' + obj.customer.last_name;
 		var billingAddress = {}
 		billingAddress.name = obj.billing_address.name;
 		billingAddress.street = obj.billing_address.address1;
@@ -100,17 +101,17 @@ function formOrder(dataArr, req) {
 			item.price = itemObj.price;
 			item.quantity = itemObj.quantity;
 			item.sku = itemObj.sku;
-			items[i] = item;
+			items[j] = item;
 			quantity += itemObj.quantity;
 		}
 		resObj.items = items;
 		resObj.quantity = quantity;
 		resArr[i] = resObj;
 	}
-	post(resArr, req);
+	post(resArr, node);
 }
 
-function formProduct(dataArr,req) {
+function formProduct(dataArr,node) {
 	var obj,resObj;
 	var resArr = [];
 	for(var i = 0;  i < dataArr.length; i++) {
@@ -128,13 +129,13 @@ function formProduct(dataArr,req) {
 		resObj.qtyOnHand = variants.inventory_quantity;
 		resArr[i] = resObj;
 	}
-	post(resArr, req);
+	post(resArr, node);
 }
 
 function run(node) {
 	var entity = node.reqData.entity;
 	var args = {
-        headers:{Authorization : "Basic "+b64EncodeUnicode(apiKey+":"+apiPassword)}
+        headers:{ Authorization : "Basic " + b64EncodeUnicode(apiKey + ":" + apiPassword) }
     }; 
     var url = "https://"+storeName+".myshopify.com/admin/";
     var type =  entity.type;
@@ -149,8 +150,8 @@ function run(node) {
 }
 
 function post(resArr, node) {
-	console.log("****************RESPONSE**************  %j",resArr);
-	node.reqData.preData = resArr;
+	console.log("Shopify Response: %j",resArr); 
+	node.resData = resArr;
 		//post req to the core server
 }
 
