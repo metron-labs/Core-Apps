@@ -15,7 +15,7 @@ function run(node) {
 	} else {
 		url = "https://quickbooks.api.intuit.com/v3/company/";
 	}
-	oauth= new OAuth(requestUrl, authorizeUrl, apiKey, consumerSecret, "1.0", null,
+	var oauth= new OAuth(requestUrl, authorizeUrl, apiKey, consumerSecret, "1.0", null,
 		"HMAC-SHA1", null, {Accept : "application/json"} );
 	if(nodeType.toLowerCase() == "trigger") {
 		getStoreData(url, type, oauth, node);
