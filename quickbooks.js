@@ -2,25 +2,28 @@ var OAuth=require('oauth').OAuth;
 var Client = require('node-rest-client').Client;
 var client = new Client();
 
+// var emitter = require('../javascripts/emitter');
+
 var apiKey, consumerSecret, apiPassword, tokenSecret, accountType, companyId, url,
 	incomeAccNo, incomeAccName, expenseAccNo, expenseAccName, assetAccNo, assetAccName;
+var errMsg = 'Something went wrong on the request';
 
 function run(node) {
 	var requestUrl = "https://oauth.intuit.com/oauth/v1/get_request_token";
 	var authorizeUrl = "https://appcenter.intuit.com/Connect/Begin";
-	var type = node.reqData.entity.type;
-	var nodeType = node.type[0];
+	var type = node.connection.option;
+	var nodeType = node.connector.type;
 	if(accountType.toLowerCase() == "sandbox") {
 		url = "https://sandbox-quickbooks.api.intuit.com/v3/company/";
 	} else {
 		url = "https://quickbooks.api.intuit.com/v3/company/";
 	}
-	var oauth= new OAuth(requestUrl, authorizeUrl, apiKey, consumerSecret, "1.0", null,
+	oauth= new OAuth(requestUrl, authorizeUrl, apiKey, consumerSecret, "1.0", null,
 		"HMAC-SHA1", null, {Accept : "application/json"} );
 	if(nodeType.toLowerCase() == "trigger") {
 		getStoreData(url, type, oauth, node);
 	} else {
-		postData(url, type, oauth, node);
+		postAction(url, type, oauth, node);
 	}
 }
 
@@ -38,7 +41,8 @@ function getStoreData(url, type, oauth, node) {
 	url += companyId + "/query?query=" + encodeURIComponent(query);
 	oauth.get(url,apiPassword,tokenSecret,function(err,data,res) {
 		if(err) {
-			console.log('Something went wrong on the request',err);
+			console.log(errMsg,err);
+			// emitter.emit("error",errMsg, "", node);
 		} else {
 			formDataModel(data,type,node);
 		}
@@ -47,7 +51,7 @@ function getStoreData(url, type, oauth, node) {
 
 function formDataModel(data, type, node) {	
 	var res = JSON.parse(data);	
-	var dataArr = [];
+	var dataArr = [];	
 	if(type.toLowerCase() == "customer") {
 		dataArr = res.QueryResponse.Customer;
 		formCustomer(dataArr, node);
@@ -67,6 +71,11 @@ function formCustomer(dataArr, node) {
 	var resArr = [];
 	var obj,resObj;
 	var lastName = phone = company = street = city = state = country = '';
+	if(dataArr.length == 0) {
+		errMsg = 'No data found in Quickbooks';
+		console.log(errMsg);
+		// emitter.emit('error',errMsg, "","", node);
+	}
 	for(var i = 0; i < dataArr.length; i++) {
 		resObj = {};
 		obj = dataArr[i];
@@ -113,6 +122,11 @@ function formProduct(dataArr, node) {
 	var obj,resObj;
 	var sku = '';
 	var qtyOnHand = '';
+	if(dataArr.length == 0) {
+		errMsg = 'No data found in Quickbooks';
+		console.log(errMsg);
+		// emitter.emit('error',errMsg, "","", node);
+	}
 	for(var i = 0; i < dataArr.length; i++) {
 		resObj = {};
 		obj = dataArr[i];
@@ -138,6 +152,11 @@ function formOrder(dataArr, node) {
 	var resArr = [];
 	var obj,resObj;
 	var email = '';
+	if(dataArr.length == 0) {
+		errMsg = 'No data found in Quickbooks';
+		console.log(errMsg);
+		// emitter.emit('error',errMsg, "","", node);
+	}
 	for(var i = 0; i < dataArr.length; i++) {
 		resObj = {};
 		obj = dataArr[i];
@@ -197,7 +216,7 @@ function formOrder(dataArr, node) {
 	post(resArr, node);
 }
 
-function postData(url, type, oauth, node) {
+function postAction(url, type, oauth, node) {
 	if(type.toLowerCase() == "customer") {
 		postCustomer(url, oauth, node);
 	} else if(type.toLowerCase() == "product") {
@@ -209,117 +228,121 @@ function postData(url, type, oauth, node) {
 
 function postCustomer(url,  oauth, node) {
 	url += companyId + "/customer";
-	var postArr = node.resData;
 	var resArr = [];
-	var obj, postData;
-	for(var i = 0; i < postArr.length; i++ ) {
-		obj = postArr[i];
-		postData = {
-			GivenName : obj.firstName,
-			MiddleName : obj.lastName,
-			PrimaryEmailAddr : { Address : obj.email },
-			PrimaryPhone : { FreeFormNumber : obj.defaultAddress.phone },
-			BillAddr : { Line1 : obj.defaultAddress.street,
-						 City : obj.defaultAddress.city,
-						 Country : obj.defaultAddress.country,
-						 CountrySubDivisionCode : obj.defaultAddress.state,
-						 PostalCode : obj.defaultAddress.zip 
-						}
-		};
-		var Params = oauth._prepareParameters(apiPassword,tokenSecret,"POST",url);
-		var auth = oauth._buildAuthorizationHeaders(Params);
-		var args = {
-			data:postData,
-			headers : {Authorization: auth,Accept: "application/json","Content-Type":"application/json"}
-		};
-		client.post(url, args, function (data, res) {
-            resArr[i] = data;
-        }).on('error',function(err) {
-            console.log('Something went wrong on the request', err.request.options);
-    	});
-	}
-	post(resArr, node);
-}
+	var obj = node.requestData;	
+	var postData = {
+		GivenName : obj.firstName,
+		MiddleName : obj.lastName,
+		PrimaryEmailAddr : { Address : obj.email },
+		PrimaryPhone : { FreeFormNumber : obj.defaultAddress.phone },
+		BillAddr : { Line1 : obj.defaultAddress.street,
+			City : obj.defaultAddress.city,
+			Country : obj.defaultAddress.country,
+			CountrySubDivisionCode : obj.defaultAddress.state,
+			PostalCode : obj.defaultAddress.zip 
+		}
+	};
+	var Params = oauth._prepareParameters(apiPassword,tokenSecret,"POST",url);
+	var auth = oauth._buildAuthorizationHeaders(Params);
+	var args = {
+		data:postData,
+		headers : {Authorization: auth,Accept: "application/json","Content-Type":"application/json"}
+	};
+	client.post(url, args, function (data, res) {
+		var status = parseInt(res.statusCode/100);
+		if(status == 2){
+			post(data, node);
+		} else {
+			console.log(errMsg, res.statusCode);
+			// emitter.emit('error',errMsg, args.data, url, node);
+		}            
+    }).on('error',function(err) {
+        console.log(errMsg, err.request.options);
+//			emitter.emit('error',errMsg, args.data, url, node);
+	});
+}	
 
 function postProduct(url, oauth, node) {
 	url += companyId + "/item";
-	var postArr = node.resData;
 	var resArr = [];
-	var obj, postData;
-	for(var i = 0; i < postArr.length; i++ ) {
-		obj = postArr[i];
-		postData = {
-			Name: obj.name,
-			UnitPrice: obj.price,
-			Sku: obj.sku,
-  			IncomeAccountRef: {value: incomeAccNo, name:incomeAccName },
-  			ExpenseAccountRef: {value: expenseAccNo , name: expenseAccName },
-			AssetAccountRef: {value: assetAccNo,name: assetAccName},
-  			Type: "Inventory",
-  			TrackQtyOnHand: true,
-  			QtyOnHand:obj.qtyOnHand ,
-  			InvStartDate: new Date()
-		};
-		var Params = oauth._prepareParameters(apiPassword,tokenSecret,"POST",url);
-		var auth = oauth._buildAuthorizationHeaders(Params);
-		var args = {
-			data:postData,
-			headers : {Authorization: auth,Accept: "application/json","Content-Type":"application/json"}
-		};
-		client.post(url, args, function (data, res) {
-            resArr[i] = data;
-        }).on('error',function(err) {
-            console.log('Something went wrong on the request', err.request.options);
-    	});
-	}
-	post(resArr, node);
+	var obj = node.requestData;
+	postData = {
+		Name: obj.name,
+		UnitPrice: obj.price,
+		Sku: obj.sku,
+		IncomeAccountRef: {value: incomeAccNo, name:incomeAccName },
+		ExpenseAccountRef: {value: expenseAccNo , name: expenseAccName },
+		AssetAccountRef: {value: assetAccNo,name: assetAccName},
+		Type: "Inventory",
+		TrackQtyOnHand: true,
+		QtyOnHand:obj.qtyOnHand ,
+		InvStartDate: new Date()
+	};
+	var Params = oauth._prepareParameters(apiPassword,tokenSecret,"POST",url);
+	var auth = oauth._buildAuthorizationHeaders(Params);
+	var args = {
+		data:postData,
+		headers : {Authorization: auth,Accept: "application/json","Content-Type":"application/json"}
+	};
+	client.post(url, args, function (data, res) {
+		var status = parseInt(res.statusCode/100);
+    	if(status == 2){
+			post(data, node);
+		} else {
+			console.log(errMsg, res.statusCode);
+			// emitter.emit('error',errMsg, args.data, url, node);
+		}  
+    }).on('error',function(err) {
+        console.log(errMsg, err.request.options);
+      //  emiitter.emit("error",errMsg, args.data, url, node);
+	});
 }
 
 function postInvoiceOrSalesReceipt(url, type, oauth, node) {
-	var postArr = node.resData;
-	var resArr = [];
 	var lineArr = [];	
 	var newUrl = url + companyId + "/" + type.toLowerCase();
-	var obj, postData,itemObj,lineObj,cusRef;	
-	for(var i = 0; i < postArr.length; i++ ) {
-		obj = postArr[i];
-		var items = obj.items;			
-		getCustomerId(url, oauth, obj, function(data){
-			for(var j = 0; j < items.length; j++) {
-				lineObj = {};
-				item = items[j];
-				getItemId(url, oauth, item,function(id){
-					for(var k = 0; k < items.length; k++) {
-						lineObj.Amount =  (item.price * item.quantity );
-						lineObj.DetailType = "SalesItemLineDetail";
-						var salesILD = {};
-						var	itemRef = {};
-						itemRef.value =id;
-						itemRef.name = item.name;
-						salesILD.ItemRef = itemRef;
-						salesILD.Qty = item.quantity;
-						lineObj.SalesItemLineDetail = salesILD;
-						lineArr[k] = lineObj;
-						postData = { Line: lineArr,CustomerRef: data};
-						var Params = oauth._prepareParameters(apiPassword,tokenSecret,"POST",newUrl);
-						var auth = oauth._buildAuthorizationHeaders(Params);
-						var args = {
-							data: postData,
-							headers : {Authorization: auth,Accept: "application/json","Content-Type":"application/json"}
-						};
-						client.post(newUrl, args, function (data, res) {
-	            			resArr[i-1] = data;
-	            			if(i == postArr.length) {
-	            				post(resArr, node);
-	            			}
-        				}).on('error',function(err) {
-            				console.log('Something went wrong on the request', err.request.options);
-    					});
-					}			
-				});		
-			}
-		});					
-	}
+	var obj = node.requestData;
+	var postData,lineObj;	
+	var items = obj.items;			
+	getCustomerId(url, oauth, obj, function(cusRef){
+		for(var j = 0; j < items.length; j++) {
+			lineObj = {};
+			var item = items[j];
+			getItemId(url, oauth, item,function(id){
+				for(var k = 0; k < items.length; k++) {
+					lineObj.Amount =  (item.price * item.quantity );
+					lineObj.DetailType = "SalesItemLineDetail";
+					var salesILD = {};
+					var	itemRef = {};
+					itemRef.value =id;
+					itemRef.name = item.name;
+					salesILD.ItemRef = itemRef;
+					salesILD.Qty = item.quantity;
+					lineObj.SalesItemLineDetail = salesILD;
+					lineArr[k] = lineObj;
+					postData = { Line: lineArr,CustomerRef: cusRef};
+					var Params = oauth._prepareParameters(apiPassword,tokenSecret,"POST",newUrl);
+					var auth = oauth._buildAuthorizationHeaders(Params);
+					var args = {
+						data: postData,
+						headers : {Authorization: auth,Accept: "application/json","Content-Type":"application/json"}
+					};
+					client.post(newUrl, args, function (data, res) {
+						var status = parseInt(res.statusCode/100);
+						if(status == 2){
+	            				post(data, node);
+	            		} else {
+							console.log(errMsg, res.statusCode);
+							// emitter.emit('error',errMsg, args.data, newUrl, node);
+						}  	            			
+    				}).on('error',function(err) {
+        				console.log(errMsg, err.request.options);
+        				//emitter.emit('error',errMsg, args.data, newUrl, node);
+					});
+				}			
+			});		
+		}
+	});					
 }
 
 function getCustomerId(url, oauth, obj,callback) {
@@ -328,7 +351,8 @@ function getCustomerId(url, oauth, obj,callback) {
 	newUrl = url + companyId + "/query?query= "+encodeURIComponent(query);
 	oauth.get(newUrl, apiPassword, tokenSecret, function(err, data, res) {
 		if(err) {
-			console.log('Something went wrong on the request',err);
+			console.log(errMsg,err);
+		//	emitter.emit('error',errMsg, "", newUrl, node);
 		} else {
 			var result = JSON.parse(data);
 			var queryRes = result.QueryResponse;
@@ -355,11 +379,11 @@ function getNewCustomerId(url, oauth,obj,callback) {
 		PrimaryEmailAddr : { Address : obj.email },
 		PrimaryPhone : { FreeFormNumber : obj.billingAddress.phone },
 		BillAddr : { Line1 : obj.billingAddress.street,
-					 City : obj.billingAddress.city,
-					 Country : obj.billingAddress.country,
-					 CountrySubDivisionCode : obj.billingAddress.state,
-					 PostalCode : obj.billingAddress.zip 
-					}
+	 	City : obj.billingAddress.city,
+		Country : obj.billingAddress.country,
+		 CountrySubDivisionCode : obj.billingAddress.state,
+		 PostalCode : obj.billingAddress.zip 
+		}
 	};
 	var Params = oauth._prepareParameters(apiPassword,tokenSecret,"POST",url);
 	var auth = oauth._buildAuthorizationHeaders(Params);
@@ -372,7 +396,8 @@ function getNewCustomerId(url, oauth,obj,callback) {
 		customerRef.value = customer.Id;
 		customerRef.Name = customer.DisplayName;
     }).on('error',function(err) {
-        console.log('Something went wrong on the request', err.request.options);
+        console.log(errMsg, err.request.options);
+     //   emitter.emit('error',errMsg);
 	});
 	callback(customerRef);
 }
@@ -387,7 +412,8 @@ function getItemId(url, oauth, item,callback) {
 	var newUrl = url + companyId + "/query?query= " + encodeURIComponent(query);
 	oauth.get(newUrl, apiPassword, tokenSecret, function(err, data, res){
 		if(err) {
-			console.log('Something went wrong on the request',err);
+			console.log(errMsg,err);
+		//	emitter.emit('error',errMsg);
 		} else {
 			var result = JSON.parse(data);
 			var queryRes = result.QueryResponse;
@@ -430,37 +456,79 @@ function getNewItemId(url, oauth, item,callback) {
 			var product = data.Item;
 			id = product.Id;
         }).on('error',function(err) {
-            console.log('Something went wrong on the request', err.request.options);
+            console.log(errMsg, err.request.options);
+ //           emitter.emit('error',errMsg);
     	});
     	callback(id);	
 }
 
 
-function post(resArr, node) {
-	console.log("Quickbooks Response: %j", resArr);
-	node.resData = resArr;
+function post(Response, node) {
+	console.log("Quickbooks Response: %j", Response);
+	node.resData = Response;
+	//emitter.emit('success',node);
+}
+
+function testApp() {
+	var requestUrl = "https://oauth.intuit.com/oauth/v1/get_request_token";
+	var authorizeUrl = "https://appcenter.intuit.com/Connect/Begin";
+	var result;
+	
+	if(accountType.toLowerCase() == "sandbox") {
+		url = "https://sandbox-quickbooks.api.intuit.com/v3/company/";
+	} else {
+		url = "https://quickbooks.api.intuit.com/v3/company/";
+	}
+	oauth = new OAuth(requestUrl, authorizeUrl, apiKey, consumerSecret, "1.0", null,
+		"HMAC-SHA1", null, { Accept : "application/json"} );
+	var query = "select * from customer";	
+	url += companyId + "/query?query=" + encodeURIComponent(query);
+	console.log(url);
+	oauth.get(url,apiPassword,tokenSecret,function(err,data,res) {
+		if(err) {
+			result = {
+				status : 'error',
+				response : data
+			};				
+		} else {
+			result = {
+				status : 'success',
+				response : data
+			};
+		}
+		console.log(result);
+		return result;
+	});
 }
 
 module.exports = (function(node) {
 	var Quickbooks = {
 		init: function(node) {
-			var credentials = node.reqData.credentials;
-			apiKey = credentials[0];
-			consumerSecret = credentials[1];
-			apiPassword = credentials[2];
-			tokenSecret = credentials[3];
-			accountType = credentials[4];
-			companyId = credentials[5];
-			incomeAccNo = credentials[6];
-			incomeAccName = credentials[7];
-			expenseAccNo = credentials[8];
-			expenseAccName = credentials[9];
-			assetAccNo = credentials[10];
-			assetAccName = credentials[11];
+			var credentials = node.credentials;
+			apiKey = credentials.apiKey;
+			consumerSecret = credentials.consumerSecret;
+			apiPassword = credentials.apiPassword;
+			tokenSecret = credentials.tokenSecret;
+			accountType = credentials.accountType;
+			companyId = credentials.companyId;
+			incomeAccNo = credentials.incomeAccNo;
+			incomeAccName = credentials.incomeAccName;
+			expenseAccNo = credentials.expenseAccNo;
+			expenseAccName = credentials.expenseAccName;
+			assetAccNo = credentials.assetAccNo;
+			assetAccName = credentials.assetAccName;
 			run(node);
+		},
+		test: function(request) {
+			var credentials = request.credentials;
+			apiKey = credentials.apiKey;
+			consumerSecret = credentials.consumerSecret;
+			apiPassword = credentials.apiPassword;
+			tokenSecret = credentials.tokenSecret;
+			accountType = credentials.accountType;
+			companyId = credentials.companyId;
+			testApp();
 		}
 	};
 	return Quickbooks;
-})();
-
-    
+})();   

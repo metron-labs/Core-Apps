@@ -1,19 +1,46 @@
 var Client = require('node-rest-client').Client;
 var client = new Client();
 
+//var emitter = require('../javascripts/emitter');
+
 var apiKey,apiPassword,storeName;
+var errMsg = 'Something went wrong on the request';
 
 function getStoreData(url,args,type,node) {
 	client.get(url, args, function (data, res) {
-		if(type.toLowerCase() == "customer") {
-			formCustomer(data.customers,node);
-		} else if (type.toLowerCase() == "product") {
-			formProduct(data.products,node);
+		var status = parseInt(res.statusCode/100);
+		
+		if( status == 2) {
+			if(type.toLowerCase() == "customer") {
+				if(data.customers.length == 0 ) {
+					errMsg = 'No data found in Shopify';
+					console.log(errMsg);
+					// emitter.emit("error",errMsg,"",url,node);
+				}
+				formCustomer(data.customers,node);
+			} else if (type.toLowerCase() == "product") {
+				if(data.products.length == 0 ) {
+					errMsg = 'No data found in Shopify';
+					console.log(errMsg);
+					// emitter.emit("error",errMsg,"",url,node);
+				}
+				formProduct(data.products,node);
+			} else {
+				if(data.orders.length == 0 ) {
+					errMsg = 'No data found in Shopify';
+					console.log(errMsg);
+					// emitter.emit("error",errMsg,"",url,node);
+				}
+				formOrder(data.orders,node)
+			}
 		} else {
-			formOrder(data.orders,node)
-		}
+			errMsg = data.errors;
+			console.log(errMsg,res.statusCode);
+			// emitter.emit('error',errMsg,"", url, node);
+		}		
 	}).on('error',function(err){
-    	console.log('Something went wrong on the request', err.request.options);
+    	console.log(errMsg, err.request.options);
+    	//emitter.emit("error",'Something went wrong on the request',"", url, node);
     });
 }
 
@@ -132,26 +159,146 @@ function formProduct(dataArr,node) {
 	post(resArr, node);
 }
 
+function postAction(url, type, node) {
+	var action = node.connection.optionType.toLowerCase();
+	if(type == "customer" && action == "new") {
+		postCustomer(url, node);
+	} else if(type == "customer" && action == "update") {
+		updateCustomer(url, node);
+	} else if(type == "order" && action == "new") {
+		postOrder(url, node);
+	} else if(type == "order" && action == "update") {
+		updateOrder(url, node);
+	} else if(type == "product" && action == "new") {
+		postProduct(url, node);
+	} else {
+		updateProduct(url, node);
+	}
+}
+
+function postCustomer(url, node) {
+	var obj = node.requestData;
+	url += "customers.json";
+	var lastName = '';
+	var name, street, city, state, country, zip, phone, company;
+	if(obj.hasOwnProperty("shippingAddress")) {
+		name = obj.billingAddress.name;
+		street = obj.billingAddress.street;
+		city = obj.billingAddress.city;
+		state = obj.billingAddress.state;
+		country = obj.billingAddress.country;
+		zip = obj.billingAddress.zip;
+		phone = obj.billingAddress.phone;
+		company = obj.billingAddress.company;
+	} else {
+		name = obj.firstName;
+		street = obj.defaultAddress.street;
+		city = obj.defaultAddress.city;
+		state = obj.defaultAddress.state;
+		country = obj.defaultAddress.country;
+		zip = obj.defaultAddress.zip;
+		phone = obj.defaultAddress.phone;
+		company = obj.defaultAddress.company;
+	}
+	if(obj.hasOwnProperty("lastName")) {
+		lastName = obj.lastName;
+	}
+	var postData = {
+		customer : {
+			first_name : name,
+			last_name : lastName,
+			email : obj.email,
+			verified_email : true,
+			addresses : [{
+				address1 : street,
+				city : city,
+        		province : state,
+       			phone : phone,
+        		zip : zip,
+        		last_name : lastName,
+                first_name: name,
+        		country:country
+			}],
+			"send_email_welcome": false
+		}
+	};
+	var args = {
+		data : postData,
+		headers : {
+			Authorization : "Basic " + b64EncodeUnicode(apiKey + ":" + apiPassword),
+			"Content-Type": 'application/json',
+			Accept : 'application/json'
+		}
+	};
+	client.post(url, args, function(data, res) {
+		var status = parseInt(res.statusCode/100);
+		if(status == 2) {
+			post(data, node);
+		} else {
+			if(data.hasOwnProperty("errors")) {
+				errMsg = data.errors;
+			}
+			console.log('errMsg..............%j',data);
+			// emitter.emit('error', errMsg, args.data, url, node);
+		}
+	}).on('error', function(err) {
+		console.log(errMsg, err.request.options);
+		// emitter.emit('error', args.data, url, node);
+	});
+}
+
 function run(node) {
-	var entity = node.reqData.entity;
+	var nodeType = node.connector.type;
+	var url = "https://"+storeName+".myshopify.com/admin/";
+    var type =  node.connection.option.toLowerCase();
+	if(nodeType.toLowerCase() == "action") {
+		postAction(url, type, node);		
+	} else {	 
+		var args = {
+	        headers:{ Authorization : "Basic " + b64EncodeUnicode(apiKey + ":" + apiPassword) }
+	    }; 
+	    
+	    if(type == "customer") {
+	    	url += "customers.json";
+		} else if(type == "product") {
+			url += "products.json";
+		} else {
+			url += "orders.json";
+		}
+		getStoreData(url, type, node); 
+	}		 	 	
+}
+
+function testApp() {
+	var url = "https://"+storeName+".myshopify.com/admin/customers.json";
 	var args = {
         headers:{ Authorization : "Basic " + b64EncodeUnicode(apiKey + ":" + apiPassword) }
-    }; 
-    var url = "https://"+storeName+".myshopify.com/admin/";
-    var type =  entity.type;
-    if(type == "customer") {
-    	url += "customers.json";
-		} else if(type == "product") {
-		url += "products.json";
-	} else {
-		url += "orders.json";
-	}  
- 	getStoreData(url,args, type, node);  	
+    };
+    var result;
+    client.get(url, args, function(data, res) {
+    	var statusCode = parseInt(res.statusCode/100);    	
+    	if( statusCode == 2 ){
+    		result = {
+    			status : 'success',
+    			response : data
+    		};
+    	} else {
+    		result = {
+    			status : 'error',
+    			response : data.errors
+    		};
+    	}
+    	console.log(result);
+    	return result;
+    }).on('error', function(err) {
+		console.log(errMsg, err.request.options);
+    });
 }
 
 function post(resArr, node) {
 	console.log("Shopify Response: %j",resArr); 
 	node.resData = resArr;
+	// emitter.emit('success', node);
 		//post req to the core server
 }
 
@@ -159,14 +306,19 @@ module.exports = (function () {
 	var Shopify = {
 	   		 init: function (node) {
 	      	  //initial function to get request data
-	       		var credentials = node.reqData.credentials;
-				apiKey = credentials[0];
-	        	apiPassword = credentials[1];
-	        	storeName = credentials[2];
+	       		var credentials = node.credentials;
+				apiKey = credentials.apiKey;
+	        	apiPassword = credentials.apiPassword;
+	        	storeName = credentials.storeName;
 	        	run(node);
-	    	}	
+	    	}, 
+	    	test: function(request)	 {
+	    		var credentials = request.credentials;
+	    		apiKey = credentials.apiKey;
+	        	apiPassword = credentials.apiPassword;
+	        	storeName = credentials.storeName;
+	        	testApp();
+	    	}
 		}
 	return Shopify;
 })();
-
-
