@@ -247,6 +247,71 @@ function postCustomer(url, node) {
 	});
 }
 
+function postProduct(url, node) {
+	var obj = node.requestData;	
+	url += "products.json";		
+	var postData = {
+		product : {
+			title : obj.name,
+			price : obj.price
+		}
+	};
+	var args = {
+		data : postData,
+		headers : {
+			Authorization : "Basic " + b64EncodeUnicode(apiKey + ":" + apiPassword),
+			"Content-Type": 'application/json',
+			Accept : 'application/json'
+		}
+	};
+	client.post(url, args, function(data, res) {
+		var status = parseInt(res.statusCode/100);
+		if(status == 2) {
+			post(data, node);
+		} else {
+			if(data.hasOwnProperty("errors")) {
+				errMsg = data.errors;
+			}
+			console.log('errMsg..............%j',data);
+			// emitter.emit('error', errMsg, args.data, url, node);
+		}
+	}).on('error', function(err) {
+		console.log(errMsg, err.request.options);
+		// emitter.emit('error', args.data, url, node);
+	});
+}
+
+function postOrder(url, node) {
+	var obj = node.requestData;
+	url += "orders.json";		
+	var postData = {
+		
+	};
+	var args = {
+		data : postData,
+		headers : {
+			Authorization : "Basic " + b64EncodeUnicode(apiKey + ":" + apiPassword),
+			"Content-Type": 'application/json',
+			Accept : 'application/json'
+		}
+	};
+	client.post(url, args, function(data, res) {
+		var status = parseInt(res.statusCode/100);
+		if(status == 2) {
+			post(data, node);
+		} else {
+			if(data.hasOwnProperty("errors")) {
+				errMsg = data.errors;
+			}
+			console.log('errMsg..............%j',data);
+			// emitter.emit('error', errMsg, args.data, url, node);
+		}
+	}).on('error', function(err) {
+		console.log(errMsg, err.request.options);
+		// emitter.emit('error', args.data, url, node);
+	});
+}
+
 function run(node) {
 	var nodeType = node.connector.type;
 	var url = "https://"+storeName+".myshopify.com/admin/";
