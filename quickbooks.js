@@ -2,7 +2,7 @@ var OAuth=require('oauth').OAuth;
 var Client = require('node-rest-client').Client;
 var client = new Client();
 
-// var emitter = require('../javascripts/emitter');
+var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var apiKey, consumerSecret, apiPassword, tokenSecret, accountType, companyId, url,
 	incomeAccNo, incomeAccName, expenseAccNo, expenseAccName, assetAccNo, assetAccName;

@@ -1,9 +1,9 @@
 var Client = require('node-rest-client').Client;
 var client = new Client();
 
-//svar emitter = require('../javascripts/emitter');
+svar emitter = require('../core-integration-server-v2/javascripts/emitter');
 
-var accountSid,authToken,baseUrl,fromPhone;
+var accountSid, authToken, baseUrl, fromPhone;
 
 
 function run(node) {
@@ -60,7 +60,7 @@ function b64EncodeUnicode(str) {
 function post(response, node) {
 	console.log("Twilio Response: %j", response);
     node.resData = response;
-  //  emitter.emit("success",node);
+   emitter.emit("success",node);
     //post req to the core server
 }
 

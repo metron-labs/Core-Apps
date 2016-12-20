@@ -4,7 +4,7 @@ var client = new Client();
 
 var OAuth = require('oauth').OAuth2;
 
-// var emitter = require('../javascripts/emitter');
+var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var sfAccessToken, baseUrl, userName,password, clientId, clientSecret, securityToken;
 var errMsg = 'Something went wrong on the request';

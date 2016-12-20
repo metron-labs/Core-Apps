@@ -1,121 +1,148 @@
 var Client = require('node-rest-client').Client;
 var client = new Client();
 
-// var emitter = require('../javascripts/emitter');
+var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var apiKey, listId, baseUrl;
+var errMsg = 'Something went wrong on the request';
 
 function run(node) {
-    var obj = node.requestData;
-    var firstName, lastName = '';
-    var url = baseUrl + "/3.0/lists/" + listId + "/members";
-    if(obj.hasOwnProperty("shippingAddress")) {
-        firstName = obj.billingAddress.name;
-    } else {
-        firstName = obj.firstName;
-        lastName = obj.lastName;
+    try {
+        var reqObj = node.requestData;
+        var firstName, lastName = '';
+        var url = baseUrl + "/3.0/lists/" + listId + "/members";
+        if(reqObj.hasOwnProperty("shippingAddress")) {
+            firstName = reqObj.billingAddress.name
+        } else {
+            firstName = reqObj.firstName,
+            lastName = reqObj.lastName
+        }
+        var postData = {
+            email_address : reqObj.email,
+            status : "subscribed",
+            merge_fields : {
+                FNAME : firstName,
+                LNAME : lastName
+            }
+        };
+        var args = {
+            data : postData,
+            headers : {
+                "Authorization" : "apikey " + apiKey,
+                "Accept" : "application/json",
+                "Content-Type" : "application/json"
+            }
+        }; 
+        client.post(url, args, function (obj, res) {
+            try {
+                var data;  
+                var status = res.statusCode/100;
+                if (status >= 3) {
+                    data = JSON.parse(obj);
+                    if (data.hasOwnProperty("errors")) {
+                        errMsg = data.errors[0].message;                         
+                    } else {
+                        var detail = data.detail;
+                        errMsg = detail;
+                        if(detail.includes("already a list member")) {
+                            var index = detail.indexOf('U');
+                            errMsg = detail.substring(0, index);
+                        }
+                    }
+                    emitter.emit('error',errMsg, postData, url, node);
+                } else {
+                    data = obj;
+                    var msg = "Subscriber created successfully for the email " + reqObj.email;
+                    post(data, node, msg);
+                }
+            } catch(e) {
+                emitter.emit('error', e.message, "", "", node);
+            }
+        }).on('error',function(err){
+            console.log('Something went wrong on the request', err.request.options);
+            emitter.emit('error', err, postData, url, node);
+        });
+    } catch(e) {
+        emitter.emit('error', e.message, "", "", node);
     }
-    var postData = {
-        email_address : obj.email,
-        status : "subscribed",
-        merge_fields : {
-            FNAME : firstName,
-            LNAME : lastName
-        }
-    };
-    var args = {
-        data : postData,
-        headers : {
-            "Authorization" : "apikey " + apiKey,
-            "Accept" : "application/json",
-            "Content-Type" : "application/json"
-        }
-    }; 
-    client.post(url, args, function (data, res) {
-        if(res.statusCode/100 == 2) {
-            post(data, node);
-        } else {
-            var errMsg = 'Something went wrong on the request';
-            var result = JSON.parse(data);
-            if(result.hasOwnProperty("errors")) {
-                errMsg = result.errors[0].message;
-            } else {
-                var detail = result.detail;
-                errMsg = detail;
-                if(detail.includes("already a list member")) {
-                    var index = detail.indexOf('U');
-                    errMsg = detail.substring(0, index);
-                }                  
-            } 
-            console.log(errMsg);
-            // emitter.emit('error',errMsg, args.data, url, node);
-        }        
-    }).on('error',function(err) {
-        console.log('Something went wrong on the request', err.request.options);
-        // emitter.emit('error','Something went wrong on the request', args.data, url, node);
-    });
 }
 
-function post(res, node) {
-    console.log("Mailchimp Response: %j", res);
-    node.resData = res;
-    // emitter.emit("success",node);
-    //post req to the core server
+function post(res, node, message) {
+    try {
+        node.resData = res;
+        emitter.emit("success",node,message);
+    } catch(e) {
+        emitter.emit('error', e.message, "", "", node);
+    }
 }
 
-function testApp() {
-    var url = baseUrl + "/3.0/lists/" + listId + "/members";
-    var args = {      
-        headers : {
-            "Authorization" : "apikey " + apiKey,
-            "Accept" : "application/json",
-        }
-    };
-    var result;
-    client.get(url, args, function (data, res) {
-        if(res.statusCode/100 == 2) {
-           result = {
-                status :'success',
-                response: data
-            };
-        } else {
-            var errMsg;
-            var result = JSON.parse(data);
-            if(result.hasOwnProperty("errors")) {
-                errMsg = result.errors[0].message;
-            } else {
-                var detail = result.detail;
-                errMsg = detail;                              
-            } 
-            result = {
-                status :'error',
-                response : errMsg
-            };            
-        }   
-        console.log(result);
-        return result;            
-    }).on('error',function(err) {
-       console.log('Something went wrong on the request', err.request.options);
-    });
-
+function testApp(callback) {
+    try {           
+        var url = baseUrl + "/3.0/lists/" + listId + "/members";
+        var args = {      
+            headers : {
+                "Authorization" : "apikey " + apiKey,
+                "Accept" : "application/json",
+            }
+        };
+        var result;
+        client.get(url, args, function (data, res) {
+            try {
+                if(res.statusCode/100 == 2) {
+                   result = {
+                        status :'success',
+                        response: data
+                    };
+                } else {
+                    var errMsg;
+                    var result = JSON.parse(data);
+                    if(result.hasOwnProperty("errors")) {
+                        errMsg = result.errors[0].message;
+                    } else {
+                        var detail = result.detail;
+                        errMsg = detail;                              
+                    } 
+                    result = {
+                        status :'error',
+                        response : errMsg
+                    };            
+                }   
+                callback(result);
+                return result;
+            } catch(e) {
+                callback({status:"error", response:e.stack});
+            }
+        }).on('error',function(err) {
+           callback({status:"error", response:err});
+        }); 
+    } catch(e) {
+        callback({status:"error", response:e.stack});
+    }
 }
 
 module.exports = (function () { 
     var Mailchimp = {
-        init: function (node) {           
-            //initial function to get request data
-            var credentials = node.credentials;
-            apiKey = credentials.apiKey;
-            listId = credentials.listId;
-            baseUrl = credentials.url;
-            run(node);
+        init: function (node) {
+            try {           
+                var credentials = node.credentials;
+                apiKey = credentials.apiKey;
+                listId = credentials.listId;
+                baseUrl = credentials.url;
+                run(node);
+            } catch(e) {
+                emitter.emit('error', e.message, "", "", node);
+            }
         }, 
-        test: function(request) {
-            var credentials = request.credentials;
-            apiKey = credentials.apiKey;
-            listId = credentials.listId;
-            baseUrl = credentials.url;
-            testApp();
+        test(request, callback) {
+            try {
+                var credentials = node.credentials;
+                apiKey = credentials.apiKey;
+                listId = credentials.listId;
+                baseUrl = credentials.url;
+                testApp(callback);
+            } catch(e) {
+                emitter.emit('error', e.message, "", "", node);
+            }
         }
     }
     return Mailchimp;
