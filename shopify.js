@@ -260,8 +260,8 @@ function createCustomer(url, node, callback) {
 						var msg = 'Customer with email ' + obj.email + ' has been created successfully in Shopify';
 						post(data, node, msg);
 					} else {
-						var id = data.customer.id;
-						callback(id);
+						var msg = 'Customer with email ' + obj.email + ' has been updated successfully in Shopify';
+						post(data, node, msg);
 					}					
 				} else {
 					if(data.hasOwnProperty("errors")) {
@@ -306,23 +306,27 @@ function updateCustomer(url, node) {
 			phone = obj.defaultAddress.phone;
 			company = obj.defaultAddress.company;
 		}
-		getCustomerId(url, node, function(customerId) {
-			var postData = {
-				customer : {
-					id : customerId,
-					default_address : {
-						address1 : street,
-						city : city,
-		        		province : state,
-		       			phone : phone,
-		        		zip : zip,
-		        		last_name : lastName,
-		                first_name: name,
-		        		country:country
-					}	
+		var lastName = '-';
+		if(obj.hasOwnProperty('lastName')) {
+			lastName = obj.lastName;
+		}
+		getCustomerId(url, node, function(customerId, addressId) {		
+			var newUrl = url + 'customers/' + customerId + '/addresses/' + addressId +'.json';
+			console.log(newUrl);
+			var postData = {				
+				address : {
+					id : addressId,
+					last_name : lastName,
+	                first_name: name,
+					address1 : street,
+					city : city,
+	        		province : state,
+	       			phone : phone,
+	        		zip : zip,		        		
+	        		country:country					
 				}
 			};
-			var newUrl = url + 'customers/' + customerId + '.json';
+			
 			var args = {
 				data : postData,
 				headers : {
@@ -341,8 +345,8 @@ function updateCustomer(url, node) {
 					} else {
 						if(data.hasOwnProperty("errors")) {
 							errMsg = data.errors;						
-							if(data.errors.hasOwnProperty("email")) {
-								errMsg = 'Email ' + data.errors.email[0];
+							if(data.errors.hasOwnProperty("customer_address")) {
+								errMsg = data.errors.customer_address;
 							}			
 						}					
 						emitter.emit('error', errMsg, args.data, url, node);
@@ -670,7 +674,7 @@ function run(node) {
 			getStoreData(url, args, type, node); 
 		}
 	} catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error',e.message, e.stack, "", node);
 	}	 	 	
 }
 

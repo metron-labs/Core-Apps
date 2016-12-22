@@ -55,7 +55,7 @@ function run(node) {
 
 function getStoreData(oauth, node) {
 	try {
-		var url =baseUrl + 'shops/' + shopId + '/receipts?page=' + page + '&limit=10';		
+		var url = baseUrl + 'shops/' + shopId + '/receipts?page=' + page + '&limit=5';		
 		oauth.get(url, token, tokenSecret, function(err, data, res) {
 			try {
 				if(err){
@@ -139,70 +139,76 @@ function getItems(dataArr, oauth, node) {
 		var length = dataArr.length;
 		var items = [];	
 		async.forEach(dataArr, function(obj) {		
-			var url = baseUrl +  'receipts/' + obj.name + '/transactions';		
-			oauth.get(url, token, tokenSecret, function(err, data, res) {
-				try {
-					if(err) {
-						console.log('error.....items.....',err);
-						length--;
-						if(err.hasOwnProperty("data")) {
-							emitter.emit("error", err.data, err, url, node);
-						} else {
-							emitter.emit("error", err, err, url, node);
+			var url = baseUrl +  'receipts/' + obj.name + '/transactions';	
+			setTimeout(function(){	
+				oauth.get(url, token, tokenSecret, function(err, data, res) {
+					try {
+						if(err) {
+							console.log('error.....items.....',err);
+							length--;
+							if(err.hasOwnProperty("data")) {
+								emitter.emit("error", err.data, err, url, node);
+							} else {
+								emitter.emit("error", err, err, url, node);
+							}
+						} else {						
+							var quantity = 0;						
+							var response = JSON.parse(data);
+							var itemArr = response.results;
+							var itemObj, item;				
+							for(var i = 0; i < itemArr.length; i++) {
+								itemObj = itemArr[i];
+								item = {};
+								item.id = itemObj.listing_id;
+								item.name = itemObj.title;
+								item.price = itemObj.price;
+								item. quantity = itemObj.quantity;
+								items[i] = item;
+								quantity += itemObj.quantity;
+							}
+							obj.items = items;
+							obj.name = obj.id;
+							obj.quantity = quantity;
+							length--;						
+							if(length == 0) {
+								post(dataArr,node,"");
+								if(page != null) {
+									getStoreData(oauth, node);
+								}
+								//concatResult(dataArr, oauth, node);
+							}
 						}
-					} else {						
-						var quantity = 0;						
-						var response = JSON.parse(data);
-						var itemArr = response.results;
-						var itemObj, item;				
-						for(var i = 0; i < itemArr.length; i++) {
-							itemObj = itemArr[i];
-							item = {};
-							item.id = itemObj.listing_id;
-							item.name = itemObj.title;
-							item.price = itemObj.price;
-							item. quantity = itemObj.quantity;
-							items[i] = item;
-							quantity += itemObj.quantity;
-						}
-						obj.items = items;
-						obj.name = obj.id;
-						obj.quantity = quantity;
-						length--;						
-						if(length == 0) {
-							concatResult(dataArr, oauth, node);
-						}
+					} catch(e) {
+						console.log(e.message);
+						emitter.emit('error', e.message, e.stack, "", node);
 					}
-				} catch(e) {
-					console.log(e.message);
-					emitter.emit('error', e.message, e.stack, "", node);
-				}
-			});		
-		}, function(error) {
-			console.log('error.....items......',error);
-			emitter.emit("error", err, "", "", node);
-		});
+				});		
+			}, function(error) {
+				console.log('error.....items......',error);
+				emitter.emit("error", err, "", "", node);
+			});
+		},3000);
 	} catch(e) {
 		console.log(e.message);
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }
 
-function concatResult(dataArr, oauth, node) {
-	try {
-		finalDataArr = finalDataArr.concat(dataArr);
-		if(finalDataArr.length == arrayLength) {
-			post(finalDataArr, node, "");
-		} else {
-			if(page != null) {
-				getStoreData(oauth, node);
-			}
-		}
-	} catch(e) {
-		console.log(e.message);
-		emitter.emit('error', e.message, e.stack, "", node);
-	}
-}
+/*function concatResult(dataArr, oauth, node) {
+*	try {
+*		finalDataArr = finalDataArr.concat(dataArr);
+*		if(finalDataArr.length == arrayLength) {
+*			post(finalDataArr, node, "");
+*		} else {
+*			if(page != null) {
+*				getStoreData(oauth, node);
+*			}
+*		}
+*	} catch(e) {
+*		console.log(e.message);
+*		emitter.emit('error', e.message, e.stack, "", node);
+*	}
+}*/
 
 function post(response, node, message) {
 	console.log('Etsy Response: %j', response[0]);
@@ -255,7 +261,6 @@ module.exports = (function() {
 				shopId = credentials.shopId;
 				run(node);
 			} catch(e) {
-				console.log(e.message);
 				emitter.emit('error',e.message, "", "", node);
 			}
 		}, 

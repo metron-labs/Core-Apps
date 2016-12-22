@@ -56,7 +56,7 @@ function run(node) {
                     post(data, node, msg);
                 }
             } catch(e) {
-                emitter.emit('error', e.message, "", "", node);
+                emitter.emit('error', e.message,  e.stack, "", node);
             }
         }).on('error',function(err){
             console.log('Something went wrong on the request', err.request.options);
@@ -68,12 +68,8 @@ function run(node) {
 }
 
 function post(res, node, message) {
-    try {
-        node.resData = res;
-        emitter.emit("success",node,message);
-    } catch(e) {
-        emitter.emit('error', e.message, "", "", node);
-    }
+    node.resData = res;
+    emitter.emit("success",node,message);   
 }
 
 function testApp(callback) {
@@ -130,18 +126,18 @@ module.exports = (function () {
                 baseUrl = credentials.url;
                 run(node);
             } catch(e) {
-                emitter.emit('error', e.message, "", "", node);
+                emitter.emit('error', e.message,  e.stack, "", node);
             }
         }, 
         test(request, callback) {
             try {
-                var credentials = node.credentials;
+                var credentials = request.credentials;
                 apiKey = credentials.apiKey;
                 listId = credentials.listId;
                 baseUrl = credentials.url;
                 testApp(callback);
             } catch(e) {
-                emitter.emit('error', e.message, "", "", node);
+                callback({status:"error", response:e.stack});
             }
         }
     }
