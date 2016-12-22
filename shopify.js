@@ -1,4 +1,5 @@
 var Client = require('node-rest-client').Client;
+var async = require('async');
 var client = new Client();
 
 var emitter = require("../core-integration-server-v2/javascripts/emitter");
@@ -34,19 +35,15 @@ function getStoreData(url,args,type,node) {
 					}
 				} else {
 					errMsg = data.errors;
-					console.log(errMsg,res.statusCode);
 					emitter.emit('error',errMsg,"", url, node);
 				}
 			} catch(e) {
-				console.log(e.message);
 				emitter.emit('error',e.message, "", "", node);
 			}
 		}).on('error',function(err){
-	    	console.log(errMsg, err.request.options);
 	    	emitter.emit("error",errMsg,"", url, node);
 	    });
     } catch(e) {
-		console.log(e.message);
 		emitter.emit('error',e.message, "", "", node);
 	}
 }
@@ -85,7 +82,6 @@ function formCustomer(dataArr, node) {
 		}
 		post(resArr, node,"");
 	} catch(e) {
-		console.log(e.message);
 		emitter.emit('error',e.message, "", "", node);
 	}
 }
@@ -150,7 +146,6 @@ function formOrder(dataArr, node) {
 		}
 		post(resArr, node,"");
 	} catch(e) {
-		console.log(e.message);
 		emitter.emit('error',e.message, "", "", node);
 	}
 }
@@ -176,7 +171,6 @@ function formProduct(dataArr,node) {
 		}
 		post(resArr, node,"");
 	} catch(e) {
-		console.log(e.message);
 		emitter.emit('error',e.message, "", "", node);
 	}
 }
@@ -189,19 +183,20 @@ function postDataModel(url, type, node) {
 		} else if(type == "customer" && action == "update") {
 			updateCustomer(url, node);
 		} else if(type == "order" && action == "create") {
-			getProductVarientId(url, node);
+			getVariantsId(url, node);
 		} else if(type == "order" && action == "update") {
 			updateOrder(url, node);
 		} else if(type == "product" && action == "create") {
-			createProduct(url, node);
+			createProduct(url, node.requestData);
+		} else if(type == "product" && action == "update") {
+			getProductId(url, node, 'product');
 		}
 	} catch(e) {
-		console.log(e.message);
 		emitter.emit('error',e.message, "", "", node);
 	}
 }
 
-function createCustomer(url, node) {
+function createCustomer(url, node, callback) {
 	try {
 		var obj = node.requestData;
 		url += "customers.json";
@@ -261,8 +256,13 @@ function createCustomer(url, node) {
 			try {
 				var status = parseInt(res.statusCode/100);
 				if(status == 2) {
-					var msg = 'Customer with ' + obj.email + ' has been created successfully in Shopify';
-					post(data, node, msg);
+					if(typeof callback == 'undefined') {
+						var msg = 'Customer with email ' + obj.email + ' has been created successfully in Shopify';
+						post(data, node, msg);
+					} else {
+						var id = data.customer.id;
+						callback(id);
+					}					
 				} else {
 					if(data.hasOwnProperty("errors")) {
 						errMsg = data.errors;						
@@ -273,22 +273,231 @@ function createCustomer(url, node) {
 					emitter.emit('error', errMsg, args.data, url, node);
 				}
 			} catch(e) {
-				console.log(e.message);
 				emitter.emit('error',e.message, "", "", node);
 			}
 		}).on('error', function(err) {
-			console.log(errMsg, err.request.options);
 			emitter.emit('error', args.data, url, node);
 		});
 	} catch(e) {
-		console.log(e.message);
 		emitter.emit('error',e.message, "", "", node);
 	}
 }
 
-function createProduct(url, tag, node) {
+function updateCustomer(url, node) {
 	try {
-		var obj = node.requestData;	
+		var obj = node.requestData;		
+		var name, street, city, state, country, zip, phone, company;
+		if(obj.hasOwnProperty("shippingAddress")) {
+			name = obj.billingAddress.name;
+			street = obj.billingAddress.street;
+			city = obj.billingAddress.city;
+			state = obj.billingAddress.state;
+			country = obj.billingAddress.country;
+			zip = obj.billingAddress.zip;
+			phone = obj.billingAddress.phone;
+			company = obj.billingAddress.company;
+		} else {
+			name = obj.firstName;
+			street = obj.defaultAddress.street;
+			city = obj.defaultAddress.city;
+			state = obj.defaultAddress.state;
+			country = obj.defaultAddress.country;
+			zip = obj.defaultAddress.zip;
+			phone = obj.defaultAddress.phone;
+			company = obj.defaultAddress.company;
+		}
+		getCustomerId(url, node, function(customerId) {
+			var postData = {
+				customer : {
+					id : customerId,
+					default_address : {
+						address1 : street,
+						city : city,
+		        		province : state,
+		       			phone : phone,
+		        		zip : zip,
+		        		last_name : lastName,
+		                first_name: name,
+		        		country:country
+					}	
+				}
+			};
+			var newUrl = url + 'customers/' + customerId + '.json';
+			var args = {
+				data : postData,
+				headers : {
+					Authorization : "Basic " + b64EncodeUnicode(apiKey + ":" + apiPassword),
+					"Content-Type": 'application/json',
+					Accept : 'application/json'
+				}
+			};
+			console.log('%j',postData);
+			client.put(newUrl, args, function(data, res) {
+				try {
+					var status = parseInt(res.statusCode/100);
+					if(status == 2) {
+						var msg = 'Customer with email ' + obj.email + ' has been updated successfully in Shopify';
+						post(data, node, msg);
+					} else {
+						if(data.hasOwnProperty("errors")) {
+							errMsg = data.errors;						
+							if(data.errors.hasOwnProperty("email")) {
+								errMsg = 'Email ' + data.errors.email[0];
+							}			
+						}					
+						emitter.emit('error', errMsg, args.data, url, node);
+					}
+				} catch(e) {
+					emitter.emit('error',e.message, "", "", node);
+				}
+			}).on('error', function(err) {
+				emitter.emit('error', args.data, url, node);
+			});
+		});		
+	} catch(e) {
+		emitter.emit('error',e.message, "", "", node);
+	}
+}
+
+function getCustomerId(url, node, callback) {
+	try {
+		var customer = node.requestData;		
+		var customerId;		
+		var newUrl = url + 'customers/search.json?query=' + customer.email;
+		var args = {
+			headers : { Authorization : 'Basic ' + b64EncodeUnicode(apiKey + ':' + apiPassword)}
+		};
+		client.get(newUrl, args, function(data, res) {
+			try {
+				var status = parseInt(res.statusCode/100);
+				if(status == 2) {
+					var customers = data.customers;
+					if(customers.length == 0) {
+						createCustomer(url,node, function(id) {
+							callback(id);
+						});
+					} else {						
+						var customerId = customers[0].id;		
+						callback(customerId);
+					}
+				} else {
+					errMsg = data.errors;
+					emitter.emit('error', errMsg, "", newUrl, node);
+				}
+			} catch(e){
+				emitter.emit('error', e.message, "",newUrl, node);
+			}
+		}).on('error', function(err) {
+			emitter.emit('error', err, "",newUrl, node);
+		});
+	} catch(e) {
+		emitter.emit('error', e.message, "","", node);
+	}
+}
+
+function getProductId(url, node, tag, callback) {
+	try {
+		var item;
+		if(tag.toLowerCase() == 'product') {
+			item  = node.requestData;
+		} else {
+			item = node;
+		}
+		var variantId;		
+		var newUrl = url + 'products.json?handle=' + item.name;
+		var args = {
+			headers : { Authorization : 'Basic ' + b64EncodeUnicode(apiKey + ':' + apiPassword)}
+		};
+		client.get(newUrl, args, function(data, res) {
+			try {
+				var status = parseInt(res.statusCode/100);
+				if(status == 2) {
+					var products = data.products;
+					if(products.length == 0) {
+						createProduct(url,item, function(id) {
+							callback(id);
+						});
+					} else {
+						var variants = products[0].variants[0];
+						variantId = variants.id;
+						if(item.hasOwnProperty('sku') && item.sku != '') {
+							if(variants.sku != item.sku) {
+								updateProduct(url, item, tag, callback);
+							} else {
+								callback(variantId);
+							}
+						} else {						
+							callback(variantId);
+						}
+					}
+				} else {
+					errMsg = data.errors;
+					emitter.emit('error', errMsg, "", newUrl, node);
+				}
+			} catch(e){
+				emitter.emit('error', e.message, "",newUrl, node);
+			}
+		}).on('error', function(err) {
+			emitter.emit('error', err, "",newUrl, node);
+		});
+	} catch(e) {
+		emitter.emit('error', e.message, "","", node);
+	}
+}
+
+function updateProduct(url, obj, node, tag, callback) {
+	try {
+		var newUrl = url + 'variants/' + obj.id + '.json';
+		var sku = '';
+		if(obj.hasOwnProperty('sku')) {
+			sku = obj.sku;
+		}
+		var postData = {
+			variant : {
+				id : obj.id,
+				price : obj.price,
+				sku : sku,
+				inventory_quantity : obj.quantity
+			}			
+		};
+		var args = {
+			data : postData,
+			headers : {
+				Authorization : "Basic " + b64EncodeUnicode(apiKey + ":" + apiPassword),
+				"Content-Type": 'application/json',
+				Accept : 'application/json'
+			}
+		};
+		client.put(newUrl, args, function(data, res) {
+			try {
+				var status = parseInt(res.statusCode/100);
+				if(status == 2) {
+					if(tag.toLowerCase() == 'product') {
+						var msg = "Product " + obj.name +' has been updated successfully in Shopify';
+						post(data, node, msg);
+					} else {
+						var variants = data.product.variants[0];
+						callback(variants.id);
+					}					
+				} else {
+					if(data.hasOwnProperty("errors")) {						
+							errMsg = data.errors;					
+					}
+					emitter.emit('error', errMsg, args.data, url, node);
+				}
+			} catch(e) {
+				emitter.emit('error',e.message, "", "", node);
+			}
+		}).on('error', function(err) {
+			emitter.emit('error', args.data, url, node);
+		});
+	} catch(e) {
+		emitter.emit('error',e.message, "", "", node);
+	}
+}
+
+function createProduct(url, obj, node, callback) {
+	try {
 		url += "products.json";	
 		var sku = '';
 		if(obj.hasOwnProperty('sku')) {
@@ -318,25 +527,49 @@ function createProduct(url, tag, node) {
 			try {
 				var status = parseInt(res.statusCode/100);
 				if(status == 2) {
-					var msg = "Product " + obj.name +' has been created successfully in Shopify';
-					post(data, node, msg);
+					if(typeof callback == 'undefined') {
+						var msg = "Product " + obj.name +' has been created successfully in Shopify';
+						post(data, node, msg);
+					} else {
+						var variants = data.product.variants[0];
+						callback(variants.id);
+					}					
 				} else {
 					if(data.hasOwnProperty("errors")) {						
 							errMsg = data.errors;					
 					}
-					console.log('errMsg..............%j',errMsg);
 					emitter.emit('error', errMsg, args.data, url, node);
 				}
 			} catch(e) {
-				console.log(e.message);
 				emitter.emit('error',e.message, "", "", node);
 			}
 		}).on('error', function(err) {
-			console.log(errMsg, err.request.options);
 			emitter.emit('error', args.data, url, node);
 		});
 	} catch(e) {
-		console.log(e.message);
+		emitter.emit('error',e.message, "", "", node);
+	}
+}
+
+function getVariantsId(url, node) {
+	try {
+		var obj = node.requestData;		
+		var items = obj.items;
+		var length = items.length;
+		async.forEach(items, function(item) {
+			try {
+				getProductId(url, item, 'order', function(id) {
+					item.id = id;
+					length--;
+					if(length == 0) {
+						createOrder(url, node);
+					}
+				});
+			} catch(e) {
+				emitter.emit('error',e.message, "", "", node);
+			}
+		});
+	} catch(e) {
 		emitter.emit('error',e.message, "", "", node);
 	}
 }
@@ -344,43 +577,46 @@ function createProduct(url, tag, node) {
 function createOrder(url, node) {
 	try {
 		var obj = node.requestData;
-		url += "orders.json";
-		var items = obj.items;
+		var newUrl = url + "orders.json";
+		var items = obj.items;		
 		var lineArr = [];
 		for(var i = 0; i < items.length; i++)		{
 			var lineObj = {};
 			var itemObj = items[i];
-			lineObj.variant_id = itemObj.variantId;
+			lineObj.variant_id = itemObj.id;
 			lineObj.quantity = itemObj.quantity;
 			lineArr[i] = lineObj;
 		}
 		var postData = {
-			line_items : lineArr,
-			customer : {
-				first_name : obj.customerName,
-				last_name : '',
-				email : obj.email
-			},
-			email : obj.email,
-			billing_address : {
-				first_name : obj.billingAddress.name,
-				address1 : obj.billingAddress.street,
-				phone : obj.billingAddress.phone,
-				city : obj.billingAddress.city,
-				province : obj.billingAddress.state,
-				country : obj.billingAddress.country,
-				zip : obj.billingAddress.zip
-			},
-			shipping_address : {
-				first_name : obj.shippingAddress.name,
-				address1 : obj.shippingAddress.street,
-				phone : obj.shippingAddress.phone,
-				city : obj.shippingAddress.city,
-				province : obj.shippingAddress.state,
-				country : obj.shippingAddress.country,
-				zip : obj.shippingAddress.zip
-			},
-			financial_status : obj.status
+			order : {
+				line_items : lineArr,
+				customer : {
+					first_name : obj.customerName,
+					last_name : '-',
+					email : obj.email
+				},
+				email : obj.email,				
+				billing_address : {
+					first_name : obj.billingAddress.name,
+					last_name: '-',
+					address1 : obj.billingAddress.street,
+					phone : obj.billingAddress.phone,
+					city : obj.billingAddress.city,
+					province : obj.billingAddress.state,
+					country : obj.billingAddress.country,
+					zip : obj.billingAddress.zip
+				},
+				shipping_address : {
+					first_name : obj.shippingAddress.name,
+					address1 : obj.shippingAddress.street,
+					phone : obj.shippingAddress.phone,
+					city : obj.shippingAddress.city,
+					province : obj.shippingAddress.state,
+					country : obj.shippingAddress.country,
+					zip : obj.shippingAddress.zip
+				},
+				financial_status : obj.status
+			}
 		};
 		var args = {
 			data : postData,
@@ -390,28 +626,25 @@ function createOrder(url, node) {
 				Accept : 'application/json'
 			}
 		};
-		client.post(url, args, function(data, res) {
+		client.post(newUrl, args, function(data, res) {
 			try {
 				var status = parseInt(res.statusCode/100);
 				if(status == 2) {
 					post(data, node);
 				} else {
-					if(data.hasOwnProperty("errors")) {
-						errMsg = data.errors;
+					errMsg = data.errors;
+					if(data.errors.hasOwnProperty("order")) {
+						errMsg = data.errors.order;
 					}
-					console.log('errMsg..............%j',data);
 					emitter.emit('error', errMsg, args.data, url, node);
 				}
 			} catch(e) {
-				console.log(e.message);
 				emitter.emit('error',e.message, "", "", node);
 			}
 		}).on('error', function(err) {
-			console.log(errMsg, err.request.options);
 			emitter.emit('error', args.data, url, node);
 		});
 	} catch(e) {
-		console.log(e.message);
 		emitter.emit('error',e.message, "", "", node);
 	}
 }
@@ -437,7 +670,6 @@ function run(node) {
 			getStoreData(url, args, type, node); 
 		}
 	} catch(e) {
-		console.log(e.message);
 		emitter.emit('error',e.message, "", "", node);
 	}	 	 	
 }
@@ -490,7 +722,6 @@ module.exports = (function () {
 	        	storeName = credentials.storeName;
 	        	run(node);
 	        	} catch(e) {
-					console.log(e.message);
 					emitter.emit('error',e.message, "", "", node);
 				}
 	    	}, 

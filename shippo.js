@@ -600,9 +600,8 @@ function createOrder(url, type, node) {
 		}).on('error', function(err) {
 			emitter.emit("error",errMsg, newUrl, args.data, node)
 		});
-	} 
-	catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+	} catch(e) {
+			emitter.emit('error',e.message, "", "", node);
 	}
 }
 
