@@ -22,7 +22,7 @@ function run(node) {
 			headers: { Authorization: "ShippoToken " + shippoToken }
 		};
 		if(nodeType.toLowerCase() == "trigger") {
-			if(type== "order"){
+			if(type== "order") {
 				url += "orders?page=1&results=100";
 			} else {
 				url += "transactions?page=1&results=100";
