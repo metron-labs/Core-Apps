@@ -4,7 +4,7 @@ var client = new Client();
 
 var OAuth = require('oauth').OAuth2;
 
-var emitter = require('../javascripts/emitter');
+var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var sfAccessToken, baseUrl, userName,password, clientId, clientSecret, securityToken;
 var errMsg = 'Something went wrong on the request';
@@ -406,7 +406,7 @@ function createAccount(obj, node) {
 					if(data[0].hasOwnProperty("message")) {
 						errMsg = data[0].message;
 					}
-					emitter.emit('error',errMsg,"",url,node);
+					emitter.emit('error',errMsg,"",newUrl,node);
 				}
 			} catch(e) {
 				emitter.emit('error',e.message, e.stack, "", node);
@@ -424,6 +424,7 @@ function createContact(obj, node) {
 		var query = "SELECT+Id+FROM+Contact+WHERE+Email+=+'" + obj.email + "'";
 		var url = baseUrl + "/services/data/v34.0/query?q=" + query;
 		var newUrl = baseUrl + "/services/data/v34.0/sobjects/Contact/";
+		var name, phone, company, street, city, state, country,zip;
 		var getArgs = {
 			headers : { Authorization : "Bearer " + sfAccessToken, Accept : "application/json"}
 		};
@@ -502,7 +503,7 @@ function createContact(obj, node) {
 					if(data[0].hasOwnProperty("message")) {
 						errMsg = data[0].message;
 					}
-					emitter.emit('error',errMsg,"",url, node);
+					emitter.emit('error',errMsg,"",newUrl, node);
 				}
 			} catch(e) {
 				emitter.emit('error',e.message, e.stack, "", node);
@@ -579,7 +580,7 @@ module.exports = (function(){
 				emitter.emit('error',e.message, e.stack, "", node);
 			}
 		},
-		test: function(request) {
+		test: function(request, callback) {
 			try {
 				var credentials = request.credentials;
 				clientId = credentials.clientId;

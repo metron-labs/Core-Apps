@@ -1,7 +1,7 @@
 var Client = require('node-rest-client').Client;
 var client = new Client();
 
- var emitter = require('../javascripts/emitter');
+ var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var apiKey, fromName, fromAddress, mailSubject, textMessage, sendAt, templateName;
 var errMsg = 'Something went wrong on the request';

@@ -8,7 +8,6 @@ var errMsg = 'Something went wrong on the request';
 
 function run(node) {
 	try {	
-		var type = node.option.toLowerCase();
 		var obj = node.requestData;
 		var url = "https://person-stream.clearbit.com/v2/combined/find?email=" + obj.email;
 		var args = {
@@ -21,18 +20,22 @@ function run(node) {
 					var msg = 'Person with email id ' + obj.email + ' had found in Clearbit';
 					post(data, node, msg);
 				} else {
-					errMsg = data;
+					errMsg = errMsg;
+					if(data.hasOwnProperty("error")) {
+		        		var error = data.error;
+		        		var errMsg = error.message;
+		        	}
 					emitter.emit('error', errMsg, "", url, node);
 				}
 			} catch(e) {
-				emitter.emit('error', e.message, "", url, node);
+				emitter.emit('error', e.message, e.stack, url, node);
 			}
 		}).on('error',function(err) {
 			console.log(errMsg, err.request.options);
-			emitter.emit("error", errMsg);
+			emitter.emit("error", errMsg,err, url, node);
 		});	
 	} catch(e) {
-		emitter.emit('error', e.message, "", "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -45,7 +48,7 @@ function post(response, node, message) {
 	    node.resData = response;
 	   	emitter.emit("success", node, message);
 	} catch(e) {
-		emitter.emit('error', e.message, '','',node);
+		emitter.emit('error', e.message, e.stack,'',node);
 	}
 }
 
@@ -95,19 +98,19 @@ module.exports = (function() {
         init: function (node) {
         	try {
 	            var credentials = node.credentials;
-	            apiKey = credentials[0];
+	            apiKey = credentials.apiKey;
 	            run(node);
 	        } catch(e) {
-				emitter.emit('error', e.message, '','',node);
+				emitter.emit('error', e.message, e.stack,'',node);
 			}
         },
         test: function(request, callback) {
 			try {
-		      	var credentials = request.credentials;
-			    apiKey = credentials[0];
+		      	var credentials = node.credentials;
+			    apiKey = credentials.apiKey;
 		        testApp(callback);
         	} catch(e) {
-        		emitter.emit('error', e.message, '','',node);
+        		callback({status:"error", response:e.stack});
         	}
         }
     }

@@ -139,8 +139,8 @@ function getItems(dataArr, oauth, node) {
 		var length = dataArr.length;
 		var items = [];	
 		async.forEach(dataArr, function(obj) {		
-			var url = baseUrl +  'receipts/' + obj.name + '/transactions';	
-			setTimeout(function(){	
+			var url = baseUrl +  'receipts/' + obj.name + '/transactions';
+			setTimeout(function(){
 				oauth.get(url, token, tokenSecret, function(err, data, res) {
 					try {
 						if(err) {
@@ -175,40 +175,23 @@ function getItems(dataArr, oauth, node) {
 								if(page != null) {
 									getStoreData(oauth, node);
 								}
-								//concatResult(dataArr, oauth, node);
-							}
+						}
 						}
 					} catch(e) {
 						console.log(e.message);
 						emitter.emit('error', e.message, e.stack, "", node);
 					}
-				});		
-			}, function(error) {
-				console.log('error.....items......',error);
-				emitter.emit("error", err, "", "", node);
-			});
-		},3000);
+				});
+			},3000);		
+		}, function(error) {
+			console.log('error.....items......',error);
+			emitter.emit("error", err, "", "", node);
+		});
 	} catch(e) {
 		console.log(e.message);
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }
-
-/*function concatResult(dataArr, oauth, node) {
-*	try {
-*		finalDataArr = finalDataArr.concat(dataArr);
-*		if(finalDataArr.length == arrayLength) {
-*			post(finalDataArr, node, "");
-*		} else {
-*			if(page != null) {
-*				getStoreData(oauth, node);
-*			}
-*		}
-*	} catch(e) {
-*		console.log(e.message);
-*		emitter.emit('error', e.message, e.stack, "", node);
-*	}
-}*/
 
 function post(response, node, message) {
 	console.log('Etsy Response: %j', response[0]);

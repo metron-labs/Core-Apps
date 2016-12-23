@@ -63,7 +63,7 @@ function run(node) {
             emitter.emit('error', err, postData, url, node);
         });
     } catch(e) {
-        emitter.emit('error', e.message, "", "", node);
+        emitter.emit('error', e.message, e.stack, "", node);
     }
 }
 

@@ -33,7 +33,7 @@ function run(node) {
 		}	
 	} 
 	catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }
 
@@ -140,7 +140,7 @@ function formOrder(dataArr, args, node){
 		getOrderTransactions(resArr, args, node);
 	} 
 	catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -177,11 +177,11 @@ function getOrderTransactions(resArr, args, node) {
 					emitter.emit("error",errMsg, "", transUrl, node);
 				});
 		}}, function(error) {
-			emitter.emit("error",error, "", "", node);
+			emitter.emit("error",errMsg, error, "", node);
 		});
 	} 
 	catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error',e.message, e.stack, "", node);
 	}			
 }
 
@@ -217,11 +217,11 @@ function getOrderRates(resArr, args, node) {
 					emitter.emit("error",errMsg, "", rateUrl, node);
 				});
 		}}, function(error){
-			emitter.emit("error",error, "", "", node);
+			emitter.emit("error",errMsg, error, "", node);
 		});
 	} 
 	catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }
 
@@ -271,7 +271,7 @@ function formTransaction(dataArr, args,node) {
 		getTransactionsRate(resArr, args, node);
 	} 
 	catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }
 
@@ -305,11 +305,11 @@ function getTransactionsRate(resArr, args, node) {
 					emitter.emit("error",errMsg,"", rateUrl, node);
 				});
 		}}, function(error){
-			emitter.emit("error",error,"","",node);
+			emitter.emit("error", errMsg, error, "", node);
 		});
 	} 
 	catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}	
 }
 
@@ -349,11 +349,11 @@ function getShipment(resArr, args, node) {
 					emitter.emit("error",errMsg, "",shipmentUrl, node);
 				});
 		}}, function(error){
-			emitter.emit("error",error, "", "", node);
+			emitter.emit("error", errMsg, error, "", node);
 		});
 	} 
 	catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error',e.message, e.stack, "", node);
 	}	
 }
 
@@ -402,11 +402,11 @@ function getAddress(resArr, args, node) {
 				});
 			}
 		}, function(error){
-			emitter.emit("error",error, "", "", node);
+			emitter.emit("error", errMsg, error, "", node);
 		});
 	} 
 	catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -489,15 +489,15 @@ function getCustomDeclarations(resArr, args, node) {
 						emitter.emit('error',errMsg, "", declUrl, node);
 					}	
 				}).on('error', function(err) {
-					emitter.emit("error",errMsg, "", declUrl, node);
+					emitter.emit("error",errMsg, err, declUrl, node);
 				});
 			}				
 		}, function(error){
-			emitter.emit("error",error, "", "", node);
+			emitter.emit("error", errMsg, error, "", node);
 		});
 	} 
 	catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -522,7 +522,7 @@ function createOrder(url, type, node) {
 			item.currency = currency;
 			items[j] = item;
 		}
-		country = obj.shippingAddress.country.trim();
+		country = obj.shippingAddress.country;
 		if(country.length > 3) {
 			if(country.toLowerCase() == "united states") {
 				country = "US";
@@ -595,13 +595,14 @@ function createOrder(url, type, node) {
 				} else if(data.hasOwnProperty('__all__')) {
 					errMsg = data.__all__[0];
 				}
-				emitter.emit('error',errMsg, newUrl, args.data, node);
+				emitter.emit('error',errMsg, args.data, newUrl, node);
 			}
 		}).on('error', function(err) {
-			emitter.emit("error",errMsg, newUrl, args.data, node)
+			emitter.emit("error", errMsg, err, newUrl, node)
 		});
-	} catch(e) {
-			emitter.emit('error',e.message, "", "", node);
+	} 
+	catch(e) {
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -647,14 +648,14 @@ function postCustomItem(url, orderObj, node) {
 					emitter.emit('error',errMsg, newUrl, args.data, node);
 				}
 			}).on('error', function(err) {
-				emitter.emit("error",errMsg, newUrl, args.data, node);
+				emitter.emit("error",errMsg, err, newUrl, node);
 			});
 		}, function(error) {
-			emitter.emit("error",error, "", "", node);
+			emitter.emit("error",errMsg, error, "", node);
 		});
 	} 
 	catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error',e.message, e.stack, "", node);
 	}				
 }
 
@@ -698,14 +699,14 @@ function postCustomDeclarations(url, orderObj, node) {
 				} else if(data.hasOwnProperty(__all__)) {
 					errMsg = data.__all__[0];
 				}
-				emitter.emit('error', errMsg, newUrl, args.data, node);
+				emitter.emit('error', errMsg,args.data, newUrl, node);
 			}
 		}).on('error', function(err) {
-			emitter.emit("error", errMsg, newUrl, args.data, node);
+			emitter.emit("error", errMsg, err, newUrl, node);
 		});	
 	} 
 	catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }
 
@@ -786,14 +787,14 @@ function postShipment(url, orderObj, transObj, tag, node) {
 				} else if(data.hasOwnProperty('__all__')) {
 					errMsg = data.__all__[0];
 				}
-				emitter.emit('error',errMsg, newUrl, args.data, node);
+				emitter.emit('error',errMsg, args.data, newUrl, node);
 			}
 		}).on('error', function(err) {
-			emitter.emit("error",errMsg, newUrl, args.data, node);
+			emitter.emit("error",errMsg, err, newUrl, node);
 		});
 	}
 	catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }
 
@@ -850,14 +851,14 @@ function postTransaction(url, orderObj, shipObj, tag, node) {
 				} else {
 					errMsg = 'Required fields are missing (service level token, shipment, carrier account)';
 				}
-				emitter.emit('error',errMsg, newUrl, args.data, node);
+				emitter.emit('error',errMsg, args.data, newUrl, node);
 			}			
 		}).on('error', function(err) {
-			emitter.emit("error",errMsg, newUrl, args.data, node);
+			emitter.emit("error",errMsg, err, newUrl, node);
 		});
 	} 
 	catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }
 
@@ -878,10 +879,10 @@ function findResult(url, orderObj, transObj, tag, node) {
 				} else {
 					var msg;
 					if(labelType == "shipping label") {
-						msg = 'Shipping Label for the order ' + orderObj.order_number + 'created successfully';
+						msg = 'Shipping Label for the order ' + orderObj.order_number + ' created successfully';
 						post(data, node, msg);
 					} else if(labelType == "return label" && tag.toLowerCase() == "transaction") {
-						msg = 'Return Label for the order ' + orderObj.order_number + 'created successfully'
+						msg = 'Return Label for the order ' + orderObj.order_number + ' created successfully'
 						post(data, node, msg);
 					} else {
 						postShipment(url, orderObj, transObj, "transaction", node);
@@ -894,11 +895,11 @@ function findResult(url, orderObj, transObj, tag, node) {
 				emitter.emit('error',errMsg,"", newUrl, node);
 			}
 		}).on('error', function(err) {
-			emitter.emit('error', errMsg, "",newUrl, node);
+			emitter.emit('error', errMsg, err, newUrl, node);
 		});
 	} 
 	catch(e) {
-		emitter.emit('error',e.message, "","",node);
+		emitter.emit('error',e.message, e.stack,"",node);
 	}
 }
 
@@ -951,8 +952,7 @@ module.exports=(function(){
 				fromCompany = credentials.fromCompany;
 				fromStreet = credentials.fromStreet;
 				fromCity = credentials.fromCity;
-				var state = credentials.fromState.trim();
-				fromCountry = credentials.fromCountry.trim();
+				var state = credentials.fromState;
 				fromCountryCode = credentials.fromCountryCode;
 				fromZip = credentials.fromZip;
 				distanceUnit = credentials.distanceUnit;
@@ -961,13 +961,6 @@ module.exports=(function(){
 				parcelWidth = credentials.parcelWidth;
 				parcelHeight = credentials.parcelHeight;
 				parcelWeight = credentials.parcelWeight;
-				if(fromCountryCode == '') {
-					if(fromCountry.length > 3) {
-						fromCountryCode = fromCountry.substring(0,2).toUpperCase();
-					} else {
-						fromCountryCode = fromCountry;
-					} 			
-				}
 				if(state.length > 2) {
 					if(fromCountryCode.toUpperCase() == "US") {
 						state = usStates[state.toLowerCase()];
@@ -979,7 +972,7 @@ module.exports=(function(){
 				run(node);
 			} 
 			catch(e) {
-				emitter.emit('error',e.message, "", "", node);
+				emitter.emit('error',e.message, e.stack, "", node);
 			}
 		},
 		test: function(request, callback) {
