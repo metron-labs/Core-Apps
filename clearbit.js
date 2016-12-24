@@ -19,11 +19,10 @@ function run(node) {
 				if(status == 2) {
 					var msg = 'Person with email id ' + obj.email + ' had found in Clearbit';
 					post(data, node, msg);
-				} else {
-					errMsg = errMsg;
+				} else {					
 					if(data.hasOwnProperty("error")) {
 		        		var error = data.error;
-		        		var errMsg = error.message;
+		        		errMsg = error.message;
 		        	}
 					emitter.emit('error', errMsg, "", url, node);
 				}
@@ -31,7 +30,6 @@ function run(node) {
 				emitter.emit('error', e.message, e.stack, url, node);
 			}
 		}).on('error',function(err) {
-			console.log(errMsg, err.request.options);
 			emitter.emit("error", errMsg,err, url, node);
 		});	
 	} catch(e) {
@@ -81,7 +79,6 @@ function testApp(callback) {
 		            };            
 		        }   
 		        callback(result);
-		        return result;
 		    } catch(e) {
 		    	callback({status:"error", response:e.stack});
 		    }
@@ -93,26 +90,29 @@ function testApp(callback) {
 	}
 }
 
-module.exports = (function() {
-	var Clearbit = {
-        init: function (node) {
-        	try {
-	            var credentials = node.credentials;
-	            apiKey = credentials.apiKey;
-	            run(node);
-	        } catch(e) {
-				emitter.emit('error', e.message, e.stack,'',node);
-			}
-        },
-        test: function(request, callback) {
-			try {
-		      	var credentials = node.credentials;
-			    apiKey = credentials.apiKey;
-		        testApp(callback);
-        	} catch(e) {
-        		callback({status:"error", response:e.stack});
-        	}
-        }
-    }
-    return Clearbit;
-})();
+function test(request, callback) {
+	try {
+      	var credentials = request.credentials;
+	    apiKey = credentials.apiKey;
+        testApp(callback);
+	} catch(e) {
+		callback({status:"error", response:e.stack});
+	}
+}
+
+function init(node) {
+	try {
+        var credentials = node.credentials;
+        apiKey = credentials.apiKey;
+        run(node);
+    } catch(e) {
+		emitter.emit('error', e.message, e.stack,'',node);
+	}
+}
+
+var Clearbit = {
+	init :  init,
+	test : test
+};
+
+module.exports = Clearbit;

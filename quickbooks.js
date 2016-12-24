@@ -1,5 +1,6 @@
 var OAuth=require('oauth').OAuth;
 var Client = require('node-rest-client').Client;
+var async = require('async');
 var client = new Client();
 
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
@@ -247,7 +248,7 @@ function postObjects(url, type, oauth, node) {
 		} else if(type == "product") {
 			postProduct(url, oauth, node);
 		} else {
-			postInvoiceOrSalesReceipt(url,type, oauth, node);
+			getProductDetails(url,type, oauth, node);
 		}
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
@@ -257,22 +258,32 @@ function postObjects(url, type, oauth, node) {
 function postCustomer(url,  oauth, node, callback) {
 	try {
 		url += companyId + "/customer";
-		var obj;
-		if(typeof callback == 'undefined') {
-			obj = node.requestData;	
+		var obj = node.requestData;
+		var name, street, city, country, state, zip, phone;	
+		if(obj.hasOwnProperty('shippingAddress')) {
+			name = obj.billingAddress.name;
+			street = obj.billingAddress.street;
+			city = obj.billingAddress.city;
+			state = obj.billingAddress.state;
+			phone = obj.billingAddress.phone;
+			zip = obj.billingAddress.zip;
 		} else {
-			obj = node;
+			name = obj.firstName;
+			street = obj.defaultAddress.street;
+			city = obj.defaultAddress.city;
+			state = obj.defaultAddress.state;
+			phone = obj.defaultAddress.phone;
+			zip = obj.defaultAddress.zip;
 		}
 		var postData = {
-			GivenName : obj.firstName,
-			MiddleName : obj.lastName,
+			DisplayName : name,			
 			PrimaryEmailAddr : { Address : obj.email },
-			PrimaryPhone : { FreeFormNumber : obj.defaultAddress.phone },
-			BillAddr : { Line1 : obj.defaultAddress.street,
-				City : obj.defaultAddress.city,
-				Country : obj.defaultAddress.country,
-				CountrySubDivisionCode : obj.defaultAddress.state,
-				PostalCode : obj.defaultAddress.zip 
+			PrimaryPhone : { FreeFormNumber : phone },
+			BillAddr : { Line1 : street,
+				City : city,
+				Country : country,
+				CountrySubDivisionCode : state,
+				PostalCode : zip 
 			}
 		};
 		var Params = oauth._prepareParameters(apiPassword,tokenSecret,"POST",url);
@@ -281,45 +292,61 @@ function postCustomer(url,  oauth, node, callback) {
 			data:postData,
 			headers : {Authorization: auth,Accept: "application/json","Content-Type":"application/json"}
 		};
-		client.post(url, args, function (data, res) {
-			try {
-				var status = parseInt(res.statusCode/100);
-				if(status == 2){
-					if( typeof callback == 'undefined') {
-						var msg = 'Customer for ' + obj.email + ' created successfully in Quickbooks';
-						post(data, node, msg);
-					} else {
-						var customer = data.Customer;
-						var customerRef = {};
-						customerRef.value = customer.Id;
-						customerRef.Name = customer.DisplayName;
-						callback(customerRef);
+		setTimeout(function(){
+			client.post(url, args, function (data, res) {
+				try {
+					var status = parseInt(res.statusCode/100);
+					if(status == 2){
+						if( typeof callback == 'undefined') {
+							var msg = 'Customer for ' + obj.email + ' created successfully in Quickbooks';
+							post(data, node, msg);
+						} else {
+							var customer = data.Customer;
+							var customerRef = {};
+							customerRef.value = customer.Id;
+							customerRef.name = customer.DisplayName;
+							callback(customerRef);
+						}
+					} else {					
+						if(data.hasOwnProperty('Fault')) {
+							if(data.Fault.hasOwnProperty('Error')) {
+								var error = data.Fault.Error[0];
+								if(error.hasOwnProperty('Message')) {
+									errMsg = error.Message;
+									if(error.hasOwnProperty('Detail')) {
+										errMsg += ': ' + error.Detail;
+									}
+								}							
+							}
+						}
+						emitter.emit('error',errMsg, args.data, url, node);
 					}
-				} else {
+				} catch(e) {
+					emitter.emit('error',e.message, e.stack, "", node);
+				}          
+		    }).on('error',function(err) {
 					emitter.emit('error',errMsg, args.data, url, node);
-				}
-			} catch(e) {
-				emitter.emit('error',e.message, e.stack, "", node);
-			}          
-	    }).on('error',function(err) {
-				emitter.emit('error',errMsg, args.data, url, node);
-		});
+			});
+		},3000);
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }	
 
-function postProduct(url, oauth, node, callback) {
+function postProduct(url, oauth, node, item, callback) {
 	try {
 		url += companyId + "/item";
-		var resArr = [];
-		var obj;
+		var quantity;
+		var obj = item;
 		if(typeof callback == 'undefined') {
-			obj = node.requestData;	
+			obj = node.requestData;
+		} 
+		if(obj.hasOwnProperty('qtyOnHand') && obj.qtyOnHand != 0) {
+			quantity = obj.qtyOnHand;
 		} else {
-			obj = node;
+			quantity = obj.quantity;
 		}
-		postData = {
+		var postData = {
 			Name: obj.name,
 			UnitPrice: obj.price,
 			Sku: obj.sku,
@@ -328,7 +355,7 @@ function postProduct(url, oauth, node, callback) {
 			AssetAccountRef: {value: assetAccNo,name: assetAccName},
 			Type: "Inventory",
 			TrackQtyOnHand: true,
-			QtyOnHand:obj.qtyOnHand ,
+			QtyOnHand: quantity,
 			InvStartDate: new Date()
 		};
 		var Params = oauth._prepareParameters(apiPassword,tokenSecret,"POST",url);
@@ -337,88 +364,137 @@ function postProduct(url, oauth, node, callback) {
 			data:postData,
 			headers : {Authorization: auth,Accept: "application/json","Content-Type":"application/json"}
 		};
-		client.post(url, args, function (data, res) {
-			try {
-				var status = parseInt(res.statusCode/100);
-		    	if(status == 2){
-		    		if( typeof callback == 'undefined') {
-						var msg = 'Product ' + obj.name + ' created successfully in Quickbooks';
-						post(data, node, msg);
+		setTimeout(function(){
+			client.post(url, args, function (data, res) {
+				try {
+					var status = parseInt(res.statusCode/100);
+			    	if(status == 2){
+			    		if( typeof callback == 'undefined') {
+							var msg = 'Product ' + obj.name + ' created successfully in Quickbooks';
+							post(data, node, msg);
+						} else {
+							var product = data.QueryResponse.Item[0];
+							callback(product.Id);
+						}
 					} else {
-						var product = result.QueryResponse.Item[0];
-						callback(product.Id);
+						if(data.hasOwnProperty('Fault')) {
+							if(data.Fault.hasOwnProperty('Error')) {
+								var error = data.Fault.Error[0];
+								if(error.hasOwnProperty('Message')) {
+									errMsg = error.Message;
+									if(error.hasOwnProperty('Detail')) {
+										errMsg += ': ' + error.Detail;
+									}
+								}							
+							}
+						}
+						emitter.emit('error',errMsg, args.data, url, node);
 					}
-				} else {
-					emitter.emit('error',errMsg, args.data, url, node);
+				} catch(e) {
+					emitter.emit('error',e.message, e.stack, "", node);
 				}
-			} catch(e) {
-				emitter.emit('error',e.message, e.stack, "", node);
-			}
-	    }).on('error',function(err) {
-	       emiitter.emit("error",errMsg, args.data, url, node);
-		});
+		    }).on('error',function(err) {
+		       emiitter.emit("error",errMsg, args.data, url, node);
+			});
+		},5000);
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }
 
+function getProductDetails(url, type, oauth, node) {
+	try {
+		var obj = node.requestData;
+		var items = obj.items;
+		var length = items.length;
+		async.forEach(items, function(item) {
+			getItemId(url, oauth, item, node, function(id) {
+				item.id = id;
+				length--;
+				if(length == 0) {
+					postInvoiceOrSalesReceipt(url, type, oauth, node);
+				}
+			});
+		});
+	} catch(e) {
+		emitter.emit('error', e.message, e.stack, '', node);
+	}
+}
+
 function postInvoiceOrSalesReceipt(url, type, oauth, node) {
 	try {
-		var lineArr = [];	
+		var lineArr = [];
 		var newUrl = url + companyId + "/" + type.toLowerCase();
 		var obj = node.requestData;
 		var postData,lineObj;	
 		var items = obj.items;
 		var msgType = type.charAt(0).toUpperCase() + type.substring(1)			
-		getCustomerId(url, oauth, obj, function(cusRef){
+		getCustomerId(url, oauth, node, function(cusRef) {
 			for(var j = 0; j < items.length; j++) {
 				lineObj = {};
-				var item = items[j];
-				getItemId(url, oauth, item,function(id){
-					for(var k = 0; k < items.length; k++) {
-						lineObj.Amount =  (item.price * item.quantity );
-						lineObj.DetailType = "SalesItemLineDetail";
-						var salesILD = {};
-						var	itemRef = {};
-						itemRef.value =id;
-						itemRef.name = item.name;
-						salesILD.ItemRef = itemRef;
-						salesILD.Qty = item.quantity;
-						lineObj.SalesItemLineDetail = salesILD;
-						lineArr[k] = lineObj;
-						postData = { Line: lineArr,CustomerRef: cusRef};
-						var Params = oauth._prepareParameters(apiPassword,tokenSecret,"POST",newUrl);
-						var auth = oauth._buildAuthorizationHeaders(Params);
-						var args = {
-							data: postData,
-							headers : {Authorization: auth,Accept: "application/json","Content-Type":"application/json"}
-						};
-						client.post(newUrl, args, function (data, res) {
-							try {
-								var status = parseInt(res.statusCode/100);
-								if(status == 2){
-									var msg = msgType + ' for the order with the id ' + obj.id + ' created successfully in Quickbooks';
-			            			post(data, node, msg);
-			            		} else {
-									emitter.emit('error',errMsg, args.data, newUrl, node);
-								}
-							} catch(e) {
-								emitter.emit('error',e.message, e.stack, "", node);
-							}            			
-	    				}).on('error',function(err) {
-	        				emitter.emit('error',errMsg, args.data, newUrl, node);
-						});
-					}			
-				});		
+				var item = items[j];					
+				lineObj.Amount =  (item.price * item.quantity );
+				lineObj.DetailType = "SalesItemLineDetail";
+				var salesILD = {};
+				var	itemRef = {};
+				itemRef.value =item.id;
+				itemRef.name = item.name;
+				salesILD.ItemRef = itemRef;
+				salesILD.Qty = item.quantity;
+				lineObj.SalesItemLineDetail = salesILD;
+				lineArr[j] = lineObj;
 			}
+			postData = { Line: lineArr,CustomerRef: cusRef};
+			var Params = oauth._prepareParameters(apiPassword,tokenSecret,"POST",newUrl);
+			var auth = oauth._buildAuthorizationHeaders(Params);
+			var args = {
+				data: postData,
+				headers : {Authorization: auth,Accept: "application/json","Content-Type":"application/json"}
+			};
+			setTimeout(function(){
+				client.post(newUrl, args, function (data, res) {
+					try {
+						var status = parseInt(res.statusCode/100);
+						if(status == 2){
+							var docNo;
+							if(data.hasOwnProperty('SalesReceipt')) {
+								docNo = data.SalesReceipt.DocNumber;
+							} else {
+								docNo = data.Invoice.DocNumber;
+							}
+							var msg = msgType + ' for the order with the id ' + obj.id + 
+							' created successfully in Quickbooks with the number ' + docNo;
+	            			post(data, node, msg);
+	            		} else {
+	            			if(data.hasOwnProperty('Fault')) {
+								if(data.Fault.hasOwnProperty('Error')) {
+									var error = data.Fault.Error[0];
+									if(error.hasOwnProperty('Message')) {
+										errMsg = error.Message;
+										if(error.hasOwnProperty('Detail')) {
+											errMsg += ': ' + error.Detail;
+										}
+									}							
+								}
+							}
+							emitter.emit('error',errMsg, args.data, url, node);
+						}
+					} catch(e) {
+						emitter.emit('error',e.message, e.stack, "", node);
+					}            			
+				}).on('error',function(err) {
+					emitter.emit('error',errMsg, args.data, newUrl, node);
+				});	
+			}, 3000);				
 		});	
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}				
 }
 
-function getCustomerId(url, oauth, obj, callback) {
+function getCustomerId(url, oauth, node, callback) {
 	try {
+		var obj = node.requestData;
 		var customerRef = {};
 		var query = "select * from customer where DisplayName in ('" + obj.customerName +"')";
 		newUrl = url + companyId + "/query?query= "+encodeURIComponent(query);
@@ -435,8 +511,8 @@ function getCustomerId(url, oauth, obj, callback) {
 						customerRef.name = customer.DisplayName;
 						callback(customerRef);
 					} else {
-						postCustomer(url, oauth, obj, function(result) {
-							callback(result);
+						postCustomer(url, oauth, node, function(ref) {
+							callback(ref);
 						});				
 					}
 				}
@@ -449,14 +525,10 @@ function getCustomerId(url, oauth, obj, callback) {
 	}
 }
 
-function getItemId(url, oauth, item, callback) {
+function getItemId(url, oauth, item, node, callback) {
 	try {
-		var id = '', query;
-		if(item.sku == ''){
-			query = "select * from item where Name in ('" + item.name + "')";
-		} else {
-			query = "select * from item where Sku in ('" + item.sku + "')";
-		}
+		var id = '';	
+		var query = "select * from item where Name in ('" + item.name + "')";		
 		var newUrl = url + companyId + "/query?query= " + encodeURIComponent(query);
 		oauth.get(newUrl, apiPassword, tokenSecret, function(err, data, res) {
 			try {
@@ -470,8 +542,8 @@ function getItemId(url, oauth, item, callback) {
 						id = product.Id;	
 						callback(id);			
 					} else {
-						postProduct(url, oauth, item,function(result){
-							id = result;
+						postProduct(url, oauth, node, item,function(prodId){
+							id = prodId;
 							callback(id);
 						});
 					}
@@ -529,42 +601,45 @@ function testApp(callback) {
 	}
 }
 
-module.exports = (function(node) {
-	var Quickbooks = {
-		init: function(node) {
-			try {
-				var credentials = node.credentials;
-				apiKey = credentials.apiKey;
-				consumerSecret = credentials.consumerSecret;
-				apiPassword = credentials.apiPassword;
-				tokenSecret = credentials.tokenSecret;
-				accountType = credentials.accountType;
-				companyId = credentials.companyId;
-				incomeAccNo = credentials.incomeAccNo;
-				incomeAccName = credentials.incomeAccName;
-				expenseAccNo = credentials.expenseAccNo;
-				expenseAccName = credentials.expenseAccName;
-				assetAccNo = credentials.assetAccNo;
-				assetAccName = credentials.assetAccName;
-				run(node);
-			} catch(e) {
-				emitter.emit('error',e.message, e.stack, "", node);
-			}
-		},
-		test: function(request, callback) {
-			try {
-				var credentials = request.credentials;
-				apiKey = credentials.apiKey;
-				consumerSecret = credentials.consumerSecret;
-				apiPassword = credentials.apiPassword;
-				tokenSecret = credentials.tokenSecret;
-				accountType = credentials.accountType;
-				companyId = credentials.companyId;
-				testApp(callback);
-			} catch(e) {
-				callback({status:"error", response:e.stack});
-			}
-		}
-	};
-	return Quickbooks;
-})();   
+function test(request, callback) {
+	try {
+		var credentials = request.credentials;
+		apiKey = credentials.apiKey;
+		consumerSecret = credentials.consumerSecret;
+		apiPassword = credentials.apiPassword;
+		tokenSecret = credentials.tokenSecret;
+		accountType = credentials.accountType;
+		companyId = credentials.companyId;
+		testApp(callback);
+	} catch(e) {
+		callback({status:"error", response:e.stack});
+	}
+}
+
+function init(node) {
+	try {
+		var credentials = node.credentials;
+		apiKey = credentials.apiKey;
+		consumerSecret = credentials.consumerSecret;
+		apiPassword = credentials.apiPassword;
+		tokenSecret = credentials.tokenSecret;
+		accountType = credentials.accountType;
+		companyId = credentials.companyId;
+		incomeAccNo = credentials.incomeAccNo;
+		incomeAccName = credentials.incomeAccName;
+		expenseAccNo = credentials.expenseAccNo;
+		expenseAccName = credentials.expenseAccName;
+		assetAccNo = credentials.assetAccNo;
+		assetAccName = credentials.assetAccName;
+		run(node);
+	} catch(e) {
+		emitter.emit('error',e.message, e.stack, "", node);
+	}
+}
+
+var Quickbooks = {
+	init :  init,
+	test : test
+};
+
+module.exports = Quickbooks;

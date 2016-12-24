@@ -565,34 +565,37 @@ function testApp(callback) {
 	}
 }
 
-module.exports = (function(){
-	var SalesForce = {
-		init: function(node) {
-			try {
-				var credentials = node.credentials;
-				clientId = credentials.clientId;
-				clientSecret = credentials.clientSecret;
-				userName = credentials.userName;
-				password = credentials.password;
-				securityToken = credentials.securityToken;
-				run(node);
-			} catch(e) {
-				emitter.emit('error',e.message, e.stack, "", node);
-			}
-		},
-		test: function(request, callback) {
-			try {
-				var credentials = request.credentials;
-				clientId = credentials.clientId;
-				clientSecret = credentials.clientSecret;
-				userName = credentials.userName;
-				password = credentials.password;
-				securityToken = credentials.securityToken;
-				testApp(callback);
-			} catch(e) {
-				callback({status:"error", response:e.stack});
-			}
-		}
-	};
-	return SalesForce;
-})();
+function init(node) {
+	try {
+		var credentials = node.credentials;
+		clientId = credentials.clientId;
+		clientSecret = credentials.clientSecret;
+		userName = credentials.userName;
+		password = credentials.password;
+		securityToken = credentials.securityToken;
+		run(node);
+	} catch(e) {
+		emitter.emit('error',e.message, e.stack, "", node);
+	}
+}
+
+function test(request, callback) {
+	try {
+		var credentials = request.credentials;
+		clientId = credentials.clientId;
+		clientSecret = credentials.clientSecret;
+		userName = credentials.userName;
+		password = credentials.password;
+		securityToken = credentials.securityToken;
+		testApp(callback);
+	} catch(e) {
+		callback({status:"error", response:e.stack});
+	}
+}
+
+var SalesForce = {
+		init : init,
+		test : test  
+};
+
+module.exports = SalesForce;

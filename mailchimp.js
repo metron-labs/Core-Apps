@@ -116,30 +116,33 @@ function testApp(callback) {
     }
 }
 
-module.exports = (function () { 
-    var Mailchimp = {
-        init: function (node) {
-            try {           
-                var credentials = node.credentials;
-                apiKey = credentials.apiKey;
-                listId = credentials.listId;
-                baseUrl = credentials.url;
-                run(node);
-            } catch(e) {
-                emitter.emit('error', e.message,  e.stack, "", node);
-            }
-        }, 
-        test(request, callback) {
-            try {
-                var credentials = request.credentials;
-                apiKey = credentials.apiKey;
-                listId = credentials.listId;
-                baseUrl = credentials.url;
-                testApp(callback);
-            } catch(e) {
-                callback({status:"error", response:e.stack});
-            }
-        }
+function test(request, callback) {
+    try {
+        var credentials = request.credentials;
+        apiKey = credentials.apiKey;
+        listId = credentials.listId;
+        baseUrl = credentials.url;
+        testApp(callback);
+    } catch(e) {
+        callback({status:"error", response:e.stack});
     }
-    return Mailchimp;
-})();
+}
+
+function init(node) {
+    try {           
+        var credentials = node.credentials;
+        apiKey = credentials.apiKey;
+        listId = credentials.listId;
+        baseUrl = credentials.url;
+        run(node);
+    } catch(e) {
+        emitter.emit('error', e.message,  e.stack, "", node);
+    }
+}
+
+var Mailchimp = {
+    init :  init,
+    test : test
+};
+
+module.exports = Mailchimp;

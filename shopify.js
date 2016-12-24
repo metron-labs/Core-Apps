@@ -716,30 +716,33 @@ function post(resArr, node, message) {
 	emitter.emit("success", node, message);
 }
 
-module.exports = (function () {
-	var Shopify = {
-	   		 init: function (node) {
-	   		 	try {
-	       		var credentials = node.credentials;
-				apiKey = credentials.apiKey;
-	        	apiPassword = credentials.password;
-	        	storeName = credentials.storeName;
-	        	run(node);
-	        	} catch(e) {
-					emitter.emit('error',e.message, "", "", node);
-				}
-	    	}, 
-	    	test: function(request, callback)	 {
-	    		try {
-		    		var credentials = request.credentials;
-		    		apiKey = credentials.apiKey;
-		        	apiPassword = credentials.password;
-		        	storeName = credentials.storeName;
-		        	testApp(callback);
-		        } catch(e) {
-					callback({status:"error", response:e.stack});
-				}
-	    	}
+function init(node) {
+	try {
+   		var credentials = node.credentials;
+		apiKey = credentials.apiKey;
+    	apiPassword = credentials.password;
+    	storeName = credentials.storeName;
+    	run(node);
+    	} catch(e) {
+			emitter.emit('error',e.message, "", "", node);
 		}
-	return Shopify;
-})();
+}
+
+function test(request, callback) {
+	try {
+		var credentials = request.credentials;
+		apiKey = credentials.apiKey;
+    	apiPassword = credentials.password;
+    	storeName = credentials.storeName;
+    	testApp(callback);
+    } catch(e) {
+		callback({status:"error", response:e.stack});
+	}
+}
+
+var Shopify = {
+	init : init,
+	test : test
+};
+
+module.exports = Shopify;

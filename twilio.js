@@ -103,8 +103,7 @@ function testApp(callback) {
                         response : errMsg
                     };            
                 }   
-                console.log(result);
-                return result;
+                 callback(result);
             } catch(e) {
                callback({status:"error", response:e.stack});
             }       
@@ -116,32 +115,35 @@ function testApp(callback) {
     }
 }
 
-module.exports = (function () {
-    var Twilio = {
-        init: function (node) {
-            try {
-                var credentials = node.credentials;
-               	accountSid = credentials.accountSid;
-                authToken = credentials.authToken;
-                fromPhone = credentials.fromPhone;
-                baseUrl = credentials.url;
-                run(node);
-            } catch(e) {
-                emitter.emit('error', e.message, e.stack, "", node);
-            }
-        },
-        test: function(request, callback) {
-            try {
-                var credentials = request.credentials;
-                accountSid = credentials.accountSid;
-                authToken = credentials.authToken;
-                fromPhone = credentials.fromPhone;
-                baseUrl = credentials.url;
-                testApp(callback);
-            } catch(e) {
-                 callback({status:"error", response:e.stack});
-            }
-        }
+function test(request, callback) {
+    try {
+        var credentials = request.credentials;
+        accountSid = credentials.accountSid;
+        authToken = credentials.authToken;
+        fromPhone = credentials.fromPhone;
+        baseUrl = credentials.url;
+        testApp(callback);
+    } catch(e) {
+        callback({status:"error", response:e.stack});
     }
-    return Twilio;
-})();
+}
+
+function init(node) {
+    try {
+        var credentials = node.credentials;
+        accountSid = credentials.accountSid;
+        authToken = credentials.authToken;
+        fromPhone = credentials.fromPhone;
+        baseUrl = credentials.url;
+        run(node);
+    } catch(e) {
+        emitter.emit('error', e.message, e.stack, "", node);
+    }
+}
+
+var Twilio = {
+    init :  init,
+    test : test
+};
+
+module.exports = Twilio;

@@ -221,7 +221,6 @@ function testApp(callback) {
 						response : data
 					};
 				}
-				console.log("Result: ", result);
 				callback(result);
 			} catch(e) {
 				callback({status:"error", response:e.stack});
@@ -232,34 +231,37 @@ function testApp(callback) {
 	}
 }
 
-module.exports = (function() {
-	var Etsy = {
-		init: function(node) {
-			try {
-				var credentials = node.credentials;
-				consumerKey = credentials.consumerKey;
-				consumerSecret = credentials.consumerSecret;
-				token = credentials.token;
-				tokenSecret = credentials.tokenSecret;
-				shopId = credentials.shopId;
-				run(node);
-			} catch(e) {
-				emitter.emit('error',e.message, "", "", node);
-			}
-		}, 
-		test: function(request, callback) {
-			try {
-				var credentials = request.credentials;
-				consumerKey = credentials.consumerKey;
-				consumerSecret = credentials.consumerSecret;
-				token = credentials.token;
-				tokenSecret = credentials.tokenSecret;
-				shopId = credentials.shopId;
-				testApp(callback);
-			} catch(e) {
-				callback({status:"error", response:e.stack});
-			}
-		}
-	};
-	return Etsy;
-})();
+function test(request, callback) {
+	try {
+		var credentials = request.credentials;
+		consumerKey = credentials.consumerKey;
+		consumerSecret = credentials.consumerSecret;
+		token = credentials.token;
+		tokenSecret = credentials.tokenSecret;
+		shopId = credentials.shopId;
+		testApp(callback);
+	} catch(e) {
+		callback({status:"error", response:e.stack});
+	}
+}
+
+function init(node) {
+	try {
+		var credentials = node.credentials;
+		consumerKey = credentials.consumerKey;
+		consumerSecret = credentials.consumerSecret;
+		token = credentials.token;
+		tokenSecret = credentials.tokenSecret;
+		shopId = credentials.shopId;
+		run(node);
+	} catch(e) {
+		emitter.emit('error',e.message, "", "", node);
+	}
+}
+
+var Etsy = {
+	init :  init,
+	test : test
+};
+
+module.exports = Etsy;

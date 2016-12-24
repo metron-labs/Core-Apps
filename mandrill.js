@@ -192,39 +192,42 @@ function testApp(callback) {
 	}
 }
 
-module.exports = (function() {
-	var Mandrill = {
-		init : function(node) {
-			try {
-				var type = node.option.toLowerCase();
-				var credentials = node.credentials;
-				apiKey = credentials.apiKey;
-				fromName = credentials.fromName;
-				fromAddress = credentials.fromAddress;
-				mailSubject = credentials.mailSubject;
-				textMessage = credentials.textMessage;
-				if (type == "schedule mail" ) {
-					sendAt = credentials.sendAt;
-				} else if(type == "template") {
-					templateName = credentials.templateName;
-				} else  if(type == "schedule template") {
-					sendAt = credentials.sendAt;
-					templateName = credentials.templateName;
-				}
-				run(node);
-			} catch(e) {
-				emitter.emit('error',e.message, e.stack, "", node);
-			}
-		},
-		test(request, callback) {
-			try {
-				var credentials = request.credentials;
-				apiKey = credentials.apiKey;
-				testApp(callback);
-			} catch(e) {
-				callback({status:"error", response:e.stack});
-			}
+function test(request, callback) {
+	try {
+		var credentials = request.credentials;
+		apiKey = credentials.apiKey;
+		testApp(callback);
+	} catch(e) {
+		callback({status:"error", response:e.stack});
+	}
+}
+
+function init(node) {
+	try {
+		var type = node.option.toLowerCase();
+		var credentials = node.credentials;
+		apiKey = credentials.apiKey;
+		fromName = credentials.fromName;
+		fromAddress = credentials.fromAddress;
+		mailSubject = credentials.mailSubject;
+		textMessage = credentials.textMessage;
+		if (type == "schedule mail" ) {
+			sendAt = credentials.sendAt;
+		} else if(type == "template") {
+			templateName = credentials.templateName;
+		} else  if(type == "schedule template") {
+			sendAt = credentials.sendAt;
+			templateName = credentials.templateName;
 		}
-	};
-	return Mandrill;
-})();
+		run(node);
+	} catch(e) {
+		emitter.emit('error',e.message, e.stack, "", node);
+	}
+}
+
+var Mandrill = {
+	init :  init,
+	test : test
+};
+
+module.exports = Mandrill;

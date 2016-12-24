@@ -22,7 +22,7 @@ function run(node) {
 			headers: { Authorization: "ShippoToken " + shippoToken }
 		};
 		if(nodeType.toLowerCase() == "trigger") {
-			if(type== "order") {
+			if(type == "order"){
 				url += "orders?page=1&results=100";
 			} else {
 				url += "transactions?page=1&results=100";
@@ -941,50 +941,53 @@ function testApp(callback) {
 	}
 }
 
-module.exports=(function(){	
-	var Shippo = {
-		init: function(node) {
-			try {
-				var credentials = node.credentials;
-				shippoToken = credentials.shippoToken;
-				fromName = credentials.fromName;
-				fromPhone = credentials.fromPhone;
-				fromCompany = credentials.fromCompany;
-				fromStreet = credentials.fromStreet;
-				fromCity = credentials.fromCity;
-				var state = credentials.fromState;
-				fromCountryCode = credentials.fromCountryCode;
-				fromZip = credentials.fromZip;
-				distanceUnit = credentials.distanceUnit;
-				massUnit = credentials.massUnit;
-				parcelLength = credentials.parcelLength;
-				parcelWidth = credentials.parcelWidth;
-				parcelHeight = credentials.parcelHeight;
-				parcelWeight = credentials.parcelWeight;
-				if(state.length > 2) {
-					if(fromCountryCode.toUpperCase() == "US") {
-						state = usStates[state.toLowerCase()];
-					} else {
-						state = state.substring(0,2).toUpperCase();
-					}
-				}
-				fromState = state;
-				run(node);
-			} 
-			catch(e) {
-				emitter.emit('error',e.message, e.stack, "", node);
-			}
-		},
-		test: function(request, callback) {
-			try {
-				var credentials = request.credentials;
-				shippoToken = credentials.shippoToken;
-				testApp(callback);
-			} 
-			catch(e) {
-				callback({status:"error", response:e.stack});
+function test(request, callback) {
+    try {
+		var credentials = request.credentials;
+		shippoToken = credentials.shippoToken;
+		testApp(callback);
+	} 
+	catch(e) {
+		callback({status:"error", response:e.stack});
+	}
+}
+
+function init(node) {
+    try {
+		var credentials = node.credentials;
+		shippoToken = credentials.shippoToken;
+		fromName = credentials.fromName;
+		fromPhone = credentials.fromPhone;
+		fromCompany = credentials.fromCompany;
+		fromStreet = credentials.fromStreet;
+		fromCity = credentials.fromCity;
+		var state = credentials.fromState;
+		fromCountryCode = credentials.fromCountryCode;
+		fromZip = credentials.fromZip;
+		distanceUnit = credentials.distanceUnit;
+		massUnit = credentials.massUnit;
+		parcelLength = credentials.parcelLength;
+		parcelWidth = credentials.parcelWidth;
+		parcelHeight = credentials.parcelHeight;
+		parcelWeight = credentials.parcelWeight;
+		if(state.length > 2) {
+			if(fromCountryCode.toUpperCase() == "US") {
+				state = usStates[state.toLowerCase()];
+			} else {
+				state = state.substring(0,2).toUpperCase();
 			}
 		}
-	};
-	return Shippo;
-})();
+		fromState = state;
+		run(node);
+	} 
+	catch(e) {
+		emitter.emit('error',e.message, e.stack, "", node);
+	}
+}
+
+var Shippo = {
+    init :  init,
+    test : test
+};
+
+module.exports = Shippo;
