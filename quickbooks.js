@@ -5,7 +5,7 @@ var client = new Client();
 
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
-var apiKey, consumerSecret, apiPassword, tokenSecret, accountType, companyId, url,
+var consumerKey, consumerSecret, accessToken, tokenSecret, accountType, companyId, url,
 	incomeAccNo, incomeAccName, expenseAccNo, expenseAccName, assetAccNo, assetAccName;
 var errMsg = 'Something went wrong on the request';
 
@@ -20,7 +20,7 @@ function run(node) {
 		} else {
 			url = "https://quickbooks.api.intuit.com/v3/company/";
 		}
-		oauth= new OAuth(requestUrl, authorizeUrl, apiKey, consumerSecret, "1.0", null,
+		oauth= new OAuth(requestUrl, authorizeUrl, consumerKey, consumerSecret, "1.0", null,
 			"HMAC-SHA1", null, {Accept : "application/json"} );
 		if(nodeType.toLowerCase() == "trigger") {
 			getStoreData(url, type, oauth, node);
@@ -45,7 +45,7 @@ function getStoreData(url, type, oauth, node) {
 			query = "select * from item";
 		}
 		url += companyId + "/query?query=" + encodeURIComponent(query);
-		oauth.get(url,apiPassword,tokenSecret,function(err,data,res) {
+		oauth.get(url,accessToken,tokenSecret,function(err,data,res) {
 			try {
 				if(err) {
 					emitter.emit("error",errMsg, "", url, node);
@@ -286,7 +286,7 @@ function postCustomer(url,  oauth, node, callback) {
 				PostalCode : zip 
 			}
 		};
-		var Params = oauth._prepareParameters(apiPassword,tokenSecret,"POST",url);
+		var Params = oauth._prepareParameters(accessToken,tokenSecret,"POST",url);
 		var auth = oauth._buildAuthorizationHeaders(Params);
 		var args = {
 			data:postData,
@@ -358,7 +358,7 @@ function postProduct(url, oauth, node, item, callback) {
 			QtyOnHand: quantity,
 			InvStartDate: new Date()
 		};
-		var Params = oauth._prepareParameters(apiPassword,tokenSecret,"POST",url);
+		var Params = oauth._prepareParameters(accessToken,tokenSecret,"POST",url);
 		var auth = oauth._buildAuthorizationHeaders(Params);
 		var args = {
 			data:postData,
@@ -445,7 +445,7 @@ function postInvoiceOrSalesReceipt(url, type, oauth, node) {
 				lineArr[j] = lineObj;
 			}
 			postData = { Line: lineArr,CustomerRef: cusRef};
-			var Params = oauth._prepareParameters(apiPassword,tokenSecret,"POST",newUrl);
+			var Params = oauth._prepareParameters(accessToken,tokenSecret,"POST",newUrl);
 			var auth = oauth._buildAuthorizationHeaders(Params);
 			var args = {
 				data: postData,
@@ -498,7 +498,7 @@ function getCustomerId(url, oauth, node, callback) {
 		var customerRef = {};
 		var query = "select * from customer where DisplayName in ('" + obj.customerName +"')";
 		newUrl = url + companyId + "/query?query= "+encodeURIComponent(query);
-		oauth.get(newUrl, apiPassword, tokenSecret, function(err, data, res) {
+		oauth.get(newUrl, accessToken, tokenSecret, function(err, data, res) {
 			try {
 				if(err) {
 					emitter.emit('error',errMsg, "", newUrl, node);
@@ -530,7 +530,7 @@ function getItemId(url, oauth, item, node, callback) {
 		var id = '';	
 		var query = "select * from item where Name in ('" + item.name + "')";		
 		var newUrl = url + companyId + "/query?query= " + encodeURIComponent(query);
-		oauth.get(newUrl, apiPassword, tokenSecret, function(err, data, res) {
+		oauth.get(newUrl, accessToken, tokenSecret, function(err, data, res) {
 			try {
 				if(err) {
 					emitter.emit('error',err, "", newUrl, node);
@@ -573,12 +573,12 @@ function testApp(callback) {
 		} else {
 			url = "https://quickbooks.api.intuit.com/v3/company/";
 		}
-		oauth = new OAuth(requestUrl, authorizeUrl, apiKey, consumerSecret, "1.0", null,
+		oauth = new OAuth(requestUrl, authorizeUrl, consumerKey, consumerSecret, "1.0", null,
 			"HMAC-SHA1", null, { Accept : "application/json"} );
 		var query = "select * from customer";	
 		url += companyId + "/query?query=" + encodeURIComponent(query);
 		console.log(url);
-		oauth.get(url,apiPassword,tokenSecret,function(err,data,res) {
+		oauth.get(url,accessToken,tokenSecret,function(err,data,res) {
 			try {
 				if(err) {
 					result = {
@@ -604,9 +604,9 @@ function testApp(callback) {
 function test(request, callback) {
 	try {
 		var credentials = request.credentials;
-		apiKey = credentials.apiKey;
+		consumerKey = credentials.consumerKey;
 		consumerSecret = credentials.consumerSecret;
-		apiPassword = credentials.apiPassword;
+		accessToken = credentials.accessToken;
 		tokenSecret = credentials.tokenSecret;
 		accountType = credentials.accountType;
 		companyId = credentials.companyId;
@@ -619,9 +619,9 @@ function test(request, callback) {
 function init(node) {
 	try {
 		var credentials = node.credentials;
-		apiKey = credentials.apiKey;
+		consumerKey = credentials.consumerKey;
 		consumerSecret = credentials.consumerSecret;
-		apiPassword = credentials.apiPassword;
+		accessToken = credentials.accessToken;
 		tokenSecret = credentials.tokenSecret;
 		accountType = credentials.accountType;
 		companyId = credentials.companyId;
