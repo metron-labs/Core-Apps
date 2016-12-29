@@ -625,12 +625,12 @@ function init(node) {
 		tokenSecret = credentials.tokenSecret;
 		accountType = credentials.accountType;
 		companyId = credentials.companyId;
-		incomeAccNo = credentials.incomeAccNo;
-		incomeAccName = credentials.incomeAccName;
-		expenseAccNo = credentials.expenseAccNo;
-		expenseAccName = credentials.expenseAccName;
-		assetAccNo = credentials.assetAccNo;
-		assetAccName = credentials.assetAccName;
+		incomeAccNo = credentials.incomeAccountId;
+		incomeAccName = credentials.incomeAccountName;
+		expenseAccNo = credentials.expenseAccountId;
+		expenseAccName = credentials.expenseAccountName;
+		assetAccNo = credentials.assetAccountId;
+		assetAccName = credentials.assetAccountName;
 		run(node);
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);

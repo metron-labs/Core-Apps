@@ -3,7 +3,7 @@ var client = new Client();
 
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
-var accountSid, authToken, baseUrl, fromPhone;
+var accountSid, authToken, baseUrl, fromPhone, textMessage;
 var errMsg = 'Something went wrong on the request';
 
 function run(node) {
@@ -26,7 +26,7 @@ function run(node) {
     	} else {
     		url += "Messages.json";
             msg = 'Message has been sent successfully to ' + toPhone + ' from Twilio';
-    		postData += "Body=" + encodeURIComponent(obj.message);
+    		postData += "Body=" + encodeURIComponent(textMessage);
     	}
     	postData += "&From=" + encodeURIComponent(fromPhone) + "&To="+ encodeURIComponent(toPhone);
     	var args = {
@@ -135,6 +135,7 @@ function init(node) {
         authToken = credentials.authToken;
         fromPhone = credentials.fromPhone;
         baseUrl = credentials.url;
+        textMessage = credentials.textMessage;
         run(node);
     } catch(e) {
         emitter.emit('error', e.message, e.stack, "", node);
