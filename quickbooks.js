@@ -258,7 +258,7 @@ function postObjects(url, type, oauth, node) {
 function postCustomer(url,  oauth, node, callback) {
 	try {
 		url += companyId + "/customer";
-		var obj = node.requestData;
+		var obj = node.reqData;
 		var name, street, city, country, state, zip, phone;	
 		if(obj.hasOwnProperty('shippingAddress')) {
 			name = obj.billingAddress.name;
@@ -339,7 +339,7 @@ function postProduct(url, oauth, node, item, callback) {
 		var quantity;
 		var obj = item;
 		if(typeof callback == 'undefined') {
-			obj = node.requestData;
+			obj = node.reqData;
 		} 
 		if(obj.hasOwnProperty('qtyOnHand') && obj.qtyOnHand != 0) {
 			quantity = obj.qtyOnHand;
@@ -404,7 +404,7 @@ function postProduct(url, oauth, node, item, callback) {
 
 function getProductDetails(url, type, oauth, node) {
 	try {
-		var obj = node.requestData;
+		var obj = node.reqData;
 		var items = obj.items;
 		var length = items.length;
 		async.forEach(items, function(item) {
@@ -425,7 +425,7 @@ function postInvoiceOrSalesReceipt(url, type, oauth, node) {
 	try {
 		var lineArr = [];
 		var newUrl = url + companyId + "/" + type.toLowerCase();
-		var obj = node.requestData;
+		var obj = node.reqData;
 		var postData,lineObj;	
 		var items = obj.items;
 		var msgType = type.charAt(0).toUpperCase() + type.substring(1)			
@@ -494,7 +494,7 @@ function postInvoiceOrSalesReceipt(url, type, oauth, node) {
 
 function getCustomerId(url, oauth, node, callback) {
 	try {
-		var obj = node.requestData;
+		var obj = node.reqData;
 		var customerRef = {};
 		var query = "select * from customer where DisplayName in ('" + obj.customerName +"')";
 		newUrl = url + companyId + "/query?query= "+encodeURIComponent(query);

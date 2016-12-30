@@ -11,7 +11,7 @@ function run(node) {
         var msg;
         var type = node.option.toLowerCase();
         var url = "https://api.twilio.com/2010-04-01/Accounts/" + accountSid + "/";
-        var obj = node.requestData;
+        var obj = node.reqData;
     	var postData = "";
     	var message, toPhone;
     	if(obj.hasOwnProperty("shippingAddress")) {

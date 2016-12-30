@@ -187,7 +187,7 @@ function postDataModel(url, type, node) {
 		} else if(type == "order" && action == "update") {
 			updateOrder(url, node);
 		} else if(type == "product" && action == "create") {
-			createProduct(url, node.requestData);
+			createProduct(url, node.reqData);
 		} else if(type == "product" && action == "update") {
 			getProductId(url, node, 'product');
 		}
@@ -198,7 +198,7 @@ function postDataModel(url, type, node) {
 
 function createCustomer(url, node, callback) {
 	try {
-		var obj = node.requestData;
+		var obj = node.reqData;
 		url += "customers.json";
 		var lastName = '';
 		var name, street, city, state, country, zip, phone, company;
@@ -285,7 +285,7 @@ function createCustomer(url, node, callback) {
 
 function updateCustomer(url, node) {
 	try {
-		var obj = node.requestData;		
+		var obj = node.reqData;		
 		var name, street, city, state, country, zip, phone, company;
 		if(obj.hasOwnProperty("shippingAddress")) {
 			name = obj.billingAddress.name;
@@ -365,7 +365,7 @@ function updateCustomer(url, node) {
 
 function getCustomerId(url, node, callback) {
 	try {
-		var customer = node.requestData;		
+		var customer = node.reqData;		
 		var customerId;		
 		var newUrl = url + 'customers/search.json?query=' + customer.email;
 		var args = {
@@ -403,7 +403,7 @@ function getProductId(url, node, tag, callback) {
 	try {
 		var item;
 		if(tag.toLowerCase() == 'product') {
-			item  = node.requestData;
+			item  = node.reqData;
 		} else {
 			item = node;
 		}
@@ -557,7 +557,7 @@ function createProduct(url, obj, node, callback) {
 
 function getVariantsId(url, node) {
 	try {
-		var obj = node.requestData;		
+		var obj = node.reqData;		
 		var items = obj.items;
 		var length = items.length;
 		async.forEach(items, function(item) {
@@ -580,7 +580,7 @@ function getVariantsId(url, node) {
 
 function createOrder(url, node) {
 	try {
-		var obj = node.requestData;
+		var obj = node.reqData;
 		var newUrl = url + "orders.json";
 		var items = obj.items;		
 		var lineArr = [];

@@ -63,7 +63,7 @@ function getStoreData(url, args, type, node) {
 				emitter.emit('error', errMsg, "", url, node);
 			}	
 		}).on('error', function(err){
-			emitter.emit("error", err, "", url, node);
+			emitter.emit("error", errMsg, err, url, node);
 		});
 	} 
 	catch(e) {
@@ -505,7 +505,7 @@ function createOrder(url, type, node) {
 	try { 
 		var newUrl = url + "orders";
 		var items = [];	
-		var obj = node.requestData;
+		var obj = node.reqData;
 		var itemObj, item, postData, country;
 		for(var j = 0; j < obj.items.length; j++) {
 			var currency = "USPS";

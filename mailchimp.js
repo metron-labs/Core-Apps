@@ -8,7 +8,7 @@ var errMsg = 'Something went wrong on the request';
 
 function run(node) {
     try {
-        var reqObj = node.requestData;
+        var reqObj = node.reqData;
         var firstName, lastName = '';
         var url = baseUrl + "/3.0/lists/" + listId + "/members";
         if(reqObj.hasOwnProperty("shippingAddress")) {
@@ -59,7 +59,6 @@ function run(node) {
                 emitter.emit('error', e.message,  e.stack, "", node);
             }
         }).on('error',function(err){
-            console.log('Something went wrong on the request', err.request.options);
             emitter.emit('error', err, postData, url, node);
         });
     } catch(e) {

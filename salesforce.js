@@ -199,7 +199,7 @@ function formCustomerFromAccount(dataArr, node) {
 }
 
 function postSalesForceObjects(type, node) {
-	var obj = node.requestData;
+	var obj = node.reqData;
 	if(type == "account") {
 		createAccount(obj, node);
 	} else if(type == "lead") {

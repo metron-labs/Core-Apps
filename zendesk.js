@@ -52,7 +52,7 @@ function getStoreData(url, type, node) {
 						getStoreData(nextPage, type, node);
 					}				
 				} else {
-					emitter.emit('error', data, args.data,url, node);		
+					emitter.emit('error', data.error, args.data,url, node);		
 				}
 			} catch(e) {
 				emitter.emit('error', e.message, e.stack, url, node);
@@ -127,7 +127,7 @@ function getUserDetails(dataArr, node) {
 							post(dataArr, node, '');
 						}
 					} else {
-						emitter.emit('error', data, '', node);
+						emitter.emit('error', data.error, '', node);
 					}
 				} catch(e) {
 					emitter.emit('error', e.message, e.stack, url, node);
@@ -156,7 +156,7 @@ function postDataModel(url, type, node) {
 
 function getId(url, type, node, callback) {
 	try {
-		var reqObj = node.requestData;
+		var reqObj = node.reqData;
 		var query = 'type:' + type +'"'+ reqObj.email + '"';
 		var newUrl = url + 'search.json?query=' + encodeURIComponent(query);
 		var args = {
@@ -181,6 +181,9 @@ function getId(url, type, node, callback) {
 					if(data.hasOwnProperty('description')) {
 						errMsg = data.description;
 					}
+					if(data.hasOwnProperty('error')){
+						errMsg = data.error;
+					}
 					emitter.emit('error', errMsg, '', newUrl, node);
 				}
 			} catch(e) {
@@ -196,7 +199,7 @@ function getId(url, type, node, callback) {
 
 function updateStoreData(url, type, node) {
 	try {
-		var reqObj = node.requestData;
+		var reqObj = node.reqData;
 		var name, msg;
 		if(reqObj.hasOwnProperty('shippingAddress')) {
 			name = reqObj.shippingAddress.name;			
@@ -279,7 +282,7 @@ function updateStoreData(url, type, node) {
 
 function postTicketOrUser(url, type, option, node) {
 	try {
-		var reqObj = node.requestData;
+		var reqObj = node.reqData;
 		if(type == 'ticket') {
 			url += 'tickets.json';
 		} else {
@@ -391,8 +394,6 @@ function testApp(callback) {
 						response : data.error
 					};
 				}
-				emitter.emit('print', '$$$$$$$$$$$$$$44444444');
-				emitter.emit('print', result);
 				callback(result);
 			} catch(e) {
 				callback({status:'error', response: e.stack});

@@ -22,7 +22,7 @@ function run(node) {
 
 function sendTemplate(url, type, node) {
 	try {
-		var obj = node.requestData;
+		var obj = node.reqData;
 		var msg = 'Mail has been sent successfully to ' + obj.email + ' through Mandrill';
 		var newUrl = url + "send-template.json";
 		var contentName = "customer-name";
@@ -95,7 +95,7 @@ function sendTemplate(url, type, node) {
 
 function sendMail(url,  type, node) {
 	try {
-		var obj = node.requestData;
+		var obj = node.reqData;
 		var newUrl = url + "send.json";
 		var msg = 'Mail has been sent successfully to ' + obj.email + ' through Mandrill';
 		var postData = {

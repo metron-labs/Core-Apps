@@ -8,7 +8,7 @@ var errMsg = 'Something went wrong on the request';
 
 function run(node) {
 	try {	
-		var obj = node.requestData;
+		var obj = node.reqData;
 		var url = "https://person-stream.clearbit.com/v2/combined/find?email=" + obj.email;
 		var args = {
 			headers:{Authorization : "Bearer " + apiKey, Accept : "application/json" }
