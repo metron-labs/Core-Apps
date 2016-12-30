@@ -22,7 +22,7 @@ function run(node) {
     	if(type == "call") {
     		url += "Calls.json";
             msg = 'Call has been sent successfully to ' + toPhone + ' from Twilio';
-    		postData += encodeURIComponent(baseUrl)
+    		postData += 'Url=' + encodeURIComponent(baseUrl);
     	} else {
     		url += "Messages.json";
             msg = 'Message has been sent successfully to ' + toPhone + ' from Twilio';
@@ -41,7 +41,6 @@ function run(node) {
             try {
                 var status  = parseInt(res.statusCode/100) ;
                 if(status == 2) {
-                    var msg = 'Message has been sent successfully to ' + toPhone + ' from Twilio';
                     post(data, node, msg);
                 } else {
                     
