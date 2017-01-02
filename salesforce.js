@@ -6,7 +6,7 @@ var OAuth = require('oauth').OAuth2;
 
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
-var sfAccessToken, baseUrl, userName,password, clientId, clientSecret, securityToken;
+var sfAccessToken, baseUrl, userName,password, consumerKey, consumerSecret, securityToken;
 var errMsg = 'Something went wrong on the request';
 
 function run(node) {
@@ -16,7 +16,7 @@ function run(node) {
 		var url = "https://login.salesforce.com/services/oauth2/token";
 		var postData = "grant_type=password&username=" + encodeURIComponent(userName) 
 			+ "&password=" + password + securityToken + "&client_id="
-			+ clientId + "&client_secret=" + clientSecret;
+			+ consumerKey + "&client_secret=" + consumerSecret;
 		var args = {
 			data : postData,
 			headers : { "Content-Type":"application/x-www-form-urlencoded"}
@@ -527,7 +527,7 @@ function testApp(callback) {
 		var url = "https://login.salesforce.com/services/oauth2/token";
 		var postData = "grant_type=password&username=" + encodeURIComponent(userName) 
 			+ "&password=" + password + securityToken + "&client_id="
-			+ clientId + "&client_secret=" + clientSecret;
+			+ consumerKey + "&client_secret=" + consumerSecret;
 		var args = {
 			data : postData,
 			headers : { "Content-Type":"application/x-www-form-urlencoded"}
@@ -568,8 +568,8 @@ function testApp(callback) {
 function init(node) {
 	try {
 		var credentials = node.credentials;
-		clientId = credentials.clientId;
-		clientSecret = credentials.clientSecret;
+		consumerKey = credentials.consumerKey;
+		consumerSecret = credentials.consumerSecret;
 		userName = credentials.userName;
 		password = credentials.password;
 		securityToken = credentials.securityToken;
@@ -582,8 +582,8 @@ function init(node) {
 function test(request, callback) {
 	try {
 		var credentials = request.credentials;
-		clientId = credentials.clientId;
-		clientSecret = credentials.clientSecret;
+		consumerKey = credentials.consumerKey;
+		consumerSecret = credentials.consumerSecret;
 		userName = credentials.userName;
 		password = credentials.password;
 		securityToken = credentials.securityToken;

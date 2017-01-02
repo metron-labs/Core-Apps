@@ -19,7 +19,7 @@ function run(node) {
     	} else {
     		toPhone = obj.defaultAddress.phone;
     	}
-    	if(type == "call") {
+    	if(type == "phone") {
     		url += "Calls.json";
             msg = 'Call has been sent successfully to ' + toPhone + ' from Twilio';
     		postData += 'Url=' + encodeURIComponent(baseUrl);

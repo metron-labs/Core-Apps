@@ -4,12 +4,13 @@ var client = new Client();
 
 var emitter = require("../core-integration-server-v2/javascripts/emitter");
 
-var apiKey,apiPassword,storeName;
+var apiKey,apiPassword,storeName, actionName;
 
 var errMsg = 'Something went wrong on the request';
 
 function getStoreData(url,args,type,node) {
 	try {
+		actionName = node.connection.actionName.toLowerCase();
 		client.get(url, args, function (data, res) {
 			try {
 				var status = parseInt(res.statusCode/100);		
@@ -78,6 +79,16 @@ function formCustomer(dataArr, node) {
 			addr1.zip = obj.default_address.zip;
 			addr1.phone = obj.default_address.phone;
 			resObj.defaultAddress = addr1;
+			var slackFlag = false;
+			var marketingFlag = false;
+			if(actionName == 'slack' && i == 0) {
+				slackFlag = true;
+			}
+			if(actionName == 'marketingcloud' && i == 0) {
+				marketingFlag = true;
+			}
+			resObj.marketingFlag = marketingFlag;
+			resObj.slackFlag = slackFlag;
 			resArr[i] = resObj;
 		}
 		post(resArr, node,"");
@@ -140,6 +151,16 @@ function formOrder(dataArr, node) {
 				items[j] = item;
 				quantity += itemObj.quantity;
 			}
+			var slackFlag = false;
+			var marketingFlag = false;
+			if(actionName == 'slack' && i == 0) {
+				slackFlag = true;
+			}
+			if(actionName == 'marketingcloud' && i == 0) {
+				marketingFlag = true;
+			}
+			resObj.marketingFlag = marketingFlag;
+			resObj.slackFlag = slackFlag;
 			resObj.items = items;
 			resObj.quantity = quantity;
 			resArr[i] = resObj;
@@ -167,6 +188,16 @@ function formProduct(dataArr,node) {
 			resObj.sku = variants.sku;
 			resObj.price = variants.price;
 			resObj.qtyOnHand = variants.inventory_quantity;
+			var slackFlag = false;
+			var marketingFlag = false;
+			if(actionName == 'slack' && i == 0) {
+				slackFlag = true;
+			}
+			if(actionName == 'marketingcloud' && i == 0) {
+				marketingFlag = true;
+			}
+			resObj.marketingFlag = marketingFlag;
+			resObj.slackFlag = slackFlag;
 			resArr[i] = resObj;
 		}
 		post(resArr, node,"");
