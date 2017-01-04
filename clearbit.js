@@ -9,29 +9,31 @@ var errMsg = 'Something went wrong on the request';
 function run(node) {
 	try {	
 		var obj = node.reqData;
-		var url = "https://person-stream.clearbit.com/v2/combined/find?email=" + obj.email;
+		var url = "https://person.clearbit.com/v2/combined/find?email=" + obj.email;
 		var args = {
 			headers:{Authorization : "Bearer " + apiKey, Accept : "application/json" }
 		};
-		client.get(url,args,function(data,res) {
-			try {
-				var status = parseInt(res.statusCode/100);
-				if(status == 2) {
-					var msg = 'Person with email id ' + obj.email + ' had found in Clearbit';
-					post(data, node, msg);
-				} else {					
-					if(data.hasOwnProperty("error")) {
-		        		var error = data.error;
-		        		errMsg = error.message;
-		        	}
-					emitter.emit('error', errMsg, "", url, node);
+		setTimeout(function(){
+			client.get(url,args,function(data,res) {
+				try {
+					var status = parseInt(res.statusCode/100);
+					if(status == 2) {
+						var msg = 'Person with email id ' + obj.email + ' had found in Clearbit';
+						post(data, node, msg);
+					} else {					
+						if(data.hasOwnProperty("error")) {
+			        		var error = data.error;
+			        		errMsg = error.message;
+			        	}
+						emitter.emit('error', errMsg, "", url, node);
+					}
+				} catch(e) {
+					emitter.emit('error', e.message, e.stack, url, node);
 				}
-			} catch(e) {
-				emitter.emit('error', e.message, e.stack, url, node);
-			}
-		}).on('error',function(err) {
-			emitter.emit("error", errMsg,err, url, node);
-		});	
+			}).on('error',function(err) {
+				emitter.emit("error", errMsg,err, url, node);
+			});	
+		}, 5000);
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}

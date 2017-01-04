@@ -1,7 +1,7 @@
 var Client = require('node-rest-client').Client;
 var client = new Client();
 
-var emitter = require('../javascripts/emitter');
+var emitter = require('../core-integration-server-v2/javascripts/emitter');
 var apiKey, apiPassword, siteName, caseSubject, fromEmail, subject, message;
 var errMsg = 'Something went wrong on the request';
 
@@ -10,9 +10,9 @@ function run(node) {
 		var nodeType =  node.connector.type.toLowerCase();
 		var type = node.option.toLowerCase();
 		var reqObj = node.reqData;
-		if(nodeType == 'trigger'){
+		if(nodeType == 'trigger') {
 			getStoreData(type, node);
-		} else{
+		} else {
 			postStoreData(type, node);
 		}
 	} catch(e) {
@@ -21,7 +21,7 @@ function run(node) {
 }
 
 function getStoreData(type, node) {
-	try{
+	try {
 		var url = "https://" + siteName + ".desk.com/api/v2/customers";
 		var args = {
             headers : {
@@ -29,10 +29,10 @@ function getStoreData(type, node) {
                 Accept : "application/json"
             }
         };
-        client.get(url, args, function(data, res){
+        client.get(url, args, function(data, res) {
         	try {
         		var status = parseInt(res.statusCode/100);
-        		if(status == 2){
+        		if(status == 2) {
         			formCustomer(data._embedded.entries, node);
         		}
         	} catch(e) {
@@ -44,7 +44,7 @@ function getStoreData(type, node) {
     }
 }
 
-function formCustomer(customerArr, node){
+function formCustomer(customerArr, node) {
 	try {
 		var reqarr = [];
 		var obj, reqobj;
@@ -73,13 +73,13 @@ function postStoreData(type, node) {
 		var reqObj = node.reqData;
 		var url = "https://" + siteName + ".desk.com/api/v2/";
 		var method = node.optionType.toLowerCase();
-		if(method == "update"){
+		if(method == "update") {
 			updateStoreData(url, node, type);
-		} else if(type == "case"){
+		} else if(type == "case") {
 			url += "cases";
 			postCase(url, node, type);
 
-		} else{
+		} else {
 			url += "customers";
 			postCustomer(url, node, type);
 		}
@@ -113,15 +113,15 @@ function postCase(url, node, type) {
 				"Content-Type" : "application/json"
 			}
 		};
-		client.post(url, args, function(data, res){
+		client.post(url, args, function(data, res) {
 			try {
 				var status = parseInt(res.statusCode/100);
 				var msg;
-				if(status == 2){
+				if(status == 2) {
 					msg = "Case for " + reqObj.email + " created successfully in Desk.";
 					post(data, node, msg);
-				} else{
-					if(data.hasOwnProperty('message')){
+				} else {
+					if(data.hasOwnProperty('message')) {
 						errMsg = data.message;
 					}
 					emitter.emit('error', errMsg, args.data, url, node);
@@ -129,7 +129,7 @@ function postCase(url, node, type) {
 			} catch(e) {
 				emitter.emit('error', e,message, e.stack, url, node);
 			}
-		}).on('error', function(err){
+		}).on('error', function(err) {
 			emitter.emit('error', errMsg, args.data, url, node);
 		});
 	} catch(e) {
@@ -141,15 +141,15 @@ function postCustomer(url, node, type) {
 	try {
 		var reqObj = node.reqData;
 		var name, company = '', lastName;
-		if(reqObj.hasOwnProperty("shippingAddress")){
+		if(reqObj.hasOwnProperty("shippingAddress")) {
 			name = reqObj.shippingAddress.name;
 			if(reqObj.shippingAddress.hasOwnProperty("company")) {
 				company = reqObj.shippingAddress.company;
 			}
 			lastName = '';
-		} else{
+		} else {
 			name = reqObj.firstName;
-			if(reqObj.hasOwnProperty("defaultAddress")){
+			if(reqObj.hasOwnProperty("defaultAddress")) {
 				if(reqObj.defaultAddress.hasOwnProperty("company")) {
 					company = reqObj.defaultAddress.company;
 				}
@@ -174,26 +174,29 @@ function postCustomer(url, node, type) {
 				"Content-Type" : "application/json"
 			}
 		};
-		client.post(url, args, function(data, res){
+		client.post(url, args, function(data, res) {
 			try {
 				var status = parseInt(res.statusCode/100);
 				var msg;
-				if(status == 2){
+				if(status == 2) {
 					msg = "Customer for " + reqObj.email + " created successfully in Desk.";
 					post(data, node, msg);
-				} else{
+				} else {
 					if(data.hasOwnProperty('errors')) {
 						errMsg = data.errors;
 						if(data.errors.hasOwnProperty('emails')) {
 							errMsg = 'Email ' + reqObj.email + ' has already ' + data.errors.emails[0].value[0];
 						}
 					}
+					if(data.hasOwnProperty('message')) {
+						errMsg = data.message;
+					}
 					emitter.emit('error', errMsg, args.data, url, node);
 				}
 			} catch(e) {
 				emitter.emit('error', e,message, e.stack, url, node);
 			}
-		}).on('error', function(err){
+		}).on('error', function(err) {
 			emitter.emit('error', errMsg, args.data, url, node);
 		});
 	} catch(e) {
@@ -204,16 +207,16 @@ function postCustomer(url, node, type) {
 function updateStoreData(url, node, type) {
 	try {
 		var reqObj = node.reqData;
-		url += "/customers"
+		url += "customers"
 		var name, company;
-		if(reqObj.hasOwnProperty("shippingAddress")){
+		if(reqObj.hasOwnProperty("shippingAddress")) {
 			name = reqObj.shippingAddress.name;
 			if(reqObj.shippingAddress.hasOwnProperty("company")) {
 				company = reqObj.shippingAddress.company;
 			}
 		} else {
 			name = reqObj.firstName;
-			if(reqObj.hasOwnProperty("defaultAddress")){
+			if(reqObj.hasOwnProperty("defaultAddress")) {
 				if(reqObj.defaultAddress.hasOwnProperty("company")) {
 					company = reqObj.defaultAddress.company;
 				}
@@ -255,7 +258,10 @@ function updateStoreData(url, node, type) {
 							post(data, node, msg);
 						}
 					} else {
-						emitter.emit('error', data, args.data, url, node);
+						if(data.hasOwnProperty('message')) {
+							errMsg = data.message;
+						}
+						emitter.emit('error', errMsg, args.data, url, node);
 					}
 				} catch(e) {
 					emitter.emit('error', e.message, e.stack, url, node);
@@ -270,7 +276,7 @@ function updateStoreData(url, node, type) {
 }
 
 function getCustomerId(url, node, type, callback) {
-	try{
+	try {
 		var reqObj = node.reqData;
 		var customerId;
 		var newUrl = url + '/search?first_name=' + reqObj.firstName;
@@ -298,7 +304,7 @@ function getCustomerId(url, node, type, callback) {
 					emitter.emit('error', e.message, e.stack, '', node);
 				}
 			}).on('error', function(err) {
-				emitter.emit('error', e.message, '', newUrl, node);
+				emitter.emit('error', err, '', newUrl, node);
 			});
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, '', node);
@@ -323,15 +329,15 @@ function testApp(callback) {
 				Accept : "application/json"
 			}
 		};
-		client.get(url, args, function(data, res){
+		client.get(url, args, function(data, res) {
 			try {
 				var statusCode = parseInt(res.statusCode/100);
-				if(statusCode == 2){
+				if(statusCode == 2) {
 					result = {
 						status :'success',
                         response: data
 					};
-				} else{
+				} else {
 					result = {
                         status :'error',
                         response : data

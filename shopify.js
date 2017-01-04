@@ -5,10 +5,53 @@ var client = new Client();
 var emitter = require("../core-integration-server-v2/javascripts/emitter");
 
 var apiKey,apiPassword,storeName, actionName;
+var page = 1, count, finalDataArr = [];
 
 var errMsg = 'Something went wrong on the request';
 
-function getStoreData(url,args,type,node) {
+function getDataCount(node) {
+	try {
+		var url = "https://" + storeName + ".myshopify.com/admin/";
+	    var type =  node.option.toLowerCase();
+		var newUrl;
+		var args = {
+	        headers:{ Authorization : "Basic " + b64EncodeUnicode(apiKey + ":" + apiPassword) }
+	    };	    
+	    if(type == "customer") {
+	    	newUrl = url + "customers/count.json";
+		} else if(type == "product") {
+			newUrl = url + "products/count.json";
+		} else {
+			newUrl = url + "orders/count.json";
+		}
+		client.get(newUrl, args, function(data, res) {
+			try {
+				var status = parseInt(res.statusCode/100);
+				if(status == 2) {
+					count = data.count;
+					var dataUrl;
+					if(type == "customer") {
+				    	dataUrl = url + "customers.json?page=" + page + '&limit=10';
+					} else if(type == "product") {
+						dataUrl = url + "products.json?page=" + page + '&limit=10';
+					} else {
+						dataUrl = url + "orders.json?page=" + page + '&limit=10';
+					}
+					getStoreData(dataUrl, args, type, node);
+				} else {
+					errMsg = data.errors;
+					emitter.emit('error',errMsg,"", url, node);
+				}
+			} catch(e) {
+				emitter.emit('error',e.message, "", "", node);
+			}
+		})
+	} catch(e) {
+		emitter.emit('error',e.message, "", "", node);
+	}
+}
+
+function getStoreData(url, args, type, node) {
 	try {
 		actionName = node.connection.actionName.toLowerCase();
 		client.get(url, args, function (data, res) {
@@ -56,7 +99,7 @@ function b64EncodeUnicode(str) {
 function formCustomer(dataArr, node) {
 	try {
 		var obj, resObj;
-		var resArr = [];
+		var resArr = [];		
 		for(var i = 0; i < dataArr.length; i++) {
 			resObj = {};
 			obj = dataArr[i];
@@ -80,18 +123,18 @@ function formCustomer(dataArr, node) {
 			addr1.phone = obj.default_address.phone;
 			resObj.defaultAddress = addr1;
 			var slackFlag = false;
-			var marketingFlag = false;
 			if(actionName == 'slack' && i == 0) {
 				slackFlag = true;
-			}
-			if(actionName == 'marketingcloud' && i == 0) {
-				marketingFlag = true;
-			}
-			resObj.marketingFlag = marketingFlag;
+			}			
 			resObj.slackFlag = slackFlag;
 			resArr[i] = resObj;
 		}
 		post(resArr, node,"");
+		finalDataArr = finalDataArr.concat(resArr);
+		if(finalDataArr.length != count) {
+			page++;
+			getDataCount(node);
+		}
 	} catch(e) {
 		emitter.emit('error',e.message, "", "", node);
 	}
@@ -152,14 +195,9 @@ function formOrder(dataArr, node) {
 				quantity += itemObj.quantity;
 			}
 			var slackFlag = false;
-			var marketingFlag = false;
 			if(actionName == 'slack' && i == 0) {
 				slackFlag = true;
-			}
-			if(actionName == 'marketingcloud' && i == 0) {
-				marketingFlag = true;
-			}
-			resObj.marketingFlag = marketingFlag;
+			}			
 			resObj.slackFlag = slackFlag;
 			resObj.items = items;
 			resObj.quantity = quantity;
@@ -189,14 +227,9 @@ function formProduct(dataArr,node) {
 			resObj.price = variants.price;
 			resObj.qtyOnHand = variants.inventory_quantity;
 			var slackFlag = false;
-			var marketingFlag = false;
 			if(actionName == 'slack' && i == 0) {
 				slackFlag = true;
-			}
-			if(actionName == 'marketingcloud' && i == 0) {
-				marketingFlag = true;
-			}
-			resObj.marketingFlag = marketingFlag;
+			}			
 			resObj.slackFlag = slackFlag;
 			resArr[i] = resObj;
 		}
@@ -209,6 +242,8 @@ function formProduct(dataArr,node) {
 function postDataModel(url, type, node) {
 	try {
 		var action = node.optionType.toLowerCase();
+		var url = "https://"+storeName+".myshopify.com/admin/";
+	    var type =  node.option.toLowerCase();
 		if(type == "customer" && action == "create") {
 			createCustomer(url, node);
 		} else if(type == "customer" && action == "update") {
@@ -282,7 +317,6 @@ function createCustomer(url, node, callback) {
 				Accept : 'application/json'
 			}
 		};
-		console.log('%j',postData);
 		client.post(url, args, function(data, res) {
 			try {
 				var status = parseInt(res.statusCode/100);
@@ -366,7 +400,6 @@ function updateCustomer(url, node) {
 					Accept : 'application/json'
 				}
 			};
-			console.log('%j',postData);
 			client.put(newUrl, args, function(data, res) {
 				try {
 					var status = parseInt(res.statusCode/100);
@@ -665,6 +698,7 @@ function createOrder(url, node) {
 			try {
 				var status = parseInt(res.statusCode/100);
 				if(status == 2) {
+					var msg = 'Order for the customer with email ' + obj.email + ' has been created successfully in Shopify';
 					post(data, node);
 				} else {
 					errMsg = data.errors;
@@ -686,23 +720,11 @@ function createOrder(url, node) {
 
 function run(node) {
 	try {
-		var nodeType = node.connector.type;
-		var url = "https://"+storeName+".myshopify.com/admin/";
-	    var type =  node.option.toLowerCase();
+		var nodeType = node.connector.type;		
 		if(nodeType.toLowerCase() == "action") {
-			postDataModel(url, type, node);		
-		} else {	 
-			var args = {
-		        headers:{ Authorization : "Basic " + b64EncodeUnicode(apiKey + ":" + apiPassword) }
-		    };	    
-		    if(type == "customer") {
-		    	url += "customers.json";
-			} else if(type == "product") {
-				url += "products.json";
-			} else {
-				url += "orders.json";
-			}
-			getStoreData(url, args, type, node); 
+			postDataModel(node);		
+		} else {
+			getDataCount(node);			
 		}
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);

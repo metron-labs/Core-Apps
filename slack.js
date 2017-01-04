@@ -1,7 +1,7 @@
 var Client = require('node-rest-client').Client;
 var client = new Client();
 
-var emitter = require('../javascripts/emitter');
+var emitter = require('../core-integration-server-v2/javascripts/emitter');
 var tokenSecret, storeId, message, username;
 var errMsg = 'Something went wrong on the request';
 
@@ -99,7 +99,7 @@ function postInvite(node, type) {
 			} catch(e) {
 				emitter.emit('error', e.message, e.stack, url, node)
 			}
-		}).on('error', function(err){
+		}).on('error', function(err) {
 			emitter.emit('error', errMsg, data, url, node);
 		});
 	} catch(e) {
