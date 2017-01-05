@@ -6,7 +6,7 @@ var OAuth = require('oauth').OAuth2;
 
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
-var sfAccessToken, baseUrl, userName,password, consumerKey, consumerSecret, securityToken;
+var sfAccessToken, baseUrl, userName,password, clientId, clientSecret, securityToken;
 var errMsg = 'Something went wrong on the request';
 
 function run(node) {
@@ -16,7 +16,7 @@ function run(node) {
 		var url = "https://login.salesforce.com/services/oauth2/token";
 		var postData = "grant_type=password&username=" + encodeURIComponent(userName) 
 			+ "&password=" + password + securityToken + "&client_id="
-			+ consumerKey + "&client_secret=" + consumerSecret;
+			+ clientId + "&client_secret=" + clientSecret;
 		var args = {
 			data : postData,
 			headers : { "Content-Type":"application/x-www-form-urlencoded"}
@@ -92,9 +92,8 @@ function getObjectDetails(dataArr, type, node) {
 		var resArr = [];
 		var i = 0;
 		if(dataArr.length == 0) {
-			console.log('There is no records in %j',type);
 			errMsg = 'There is no records in '+ type;
-			// emitter.emit('error',errMsg,"", "",node);
+			emitter.emit('error',errMsg,"", "",node);
 		} else {
 			var length = dataArr.length;
 			async.forEach(dataArr, function(obj){
@@ -527,7 +526,7 @@ function testApp(callback) {
 		var url = "https://login.salesforce.com/services/oauth2/token";
 		var postData = "grant_type=password&username=" + encodeURIComponent(userName) 
 			+ "&password=" + password + securityToken + "&client_id="
-			+ consumerKey + "&client_secret=" + consumerSecret;
+			+ clientId + "&client_secret=" + clientSecret;
 		var args = {
 			data : postData,
 			headers : { "Content-Type":"application/x-www-form-urlencoded"}
@@ -568,8 +567,8 @@ function testApp(callback) {
 function init(node) {
 	try {
 		var credentials = node.credentials;
-		consumerKey = credentials.consumerKey;
-		consumerSecret = credentials.consumerSecret;
+		clientId = credentials.clientId;
+		clientSecret = credentials.clientSecret;
 		userName = credentials.userName;
 		password = credentials.password;
 		securityToken = credentials.securityToken;
@@ -582,8 +581,8 @@ function init(node) {
 function test(request, callback) {
 	try {
 		var credentials = request.credentials;
-		consumerKey = credentials.consumerKey;
-		consumerSecret = credentials.consumerSecret;
+		clientId = credentials.clientId;
+		clientSecret = credentials.clientSecret;
 		userName = credentials.userName;
 		password = credentials.password;
 		securityToken = credentials.securityToken;

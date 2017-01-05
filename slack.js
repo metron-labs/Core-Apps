@@ -2,7 +2,8 @@ var Client = require('node-rest-client').Client;
 var client = new Client();
 
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
-var tokenSecret, storeId, message, username;
+
+var tokenSecret, storeId, message, userName;
 var errMsg = 'Something went wrong on the request';
 
 function run(node) {
@@ -112,7 +113,7 @@ function postMessage(type, node) {
 		var reqObj = node.reqData;
 		var msgFlag = reqObj.slackFlag;
 		if(msgFlag) {
-			var url = "https://slack.com/api/chat.postMessage?token=" + tokenSecret + "&channel=" + storeId + "&text=" + encodeURIComponent(message) + "&username=" + username;
+			var url = "https://slack.com/api/chat.postMessage?token=" + tokenSecret + "&channel=" + storeId + "&text=" + encodeURIComponent(message) + "&userName=" + userName;
 			client.post(url, function(data, res) { 
 				try {
 					var status = parseInt(res.statusCode/100);
@@ -182,7 +183,7 @@ function init(node) {
 		tokenSecret = credentials.tokenSecret;
 		storeId = credentials.storeId;
 		message = credentials.message;
-		username = credentials.username;
+		userName = credentials.userName;
 		run(node);
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node)

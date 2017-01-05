@@ -120,11 +120,17 @@ function postCase(url, node, type) {
 				if(status == 2) {
 					msg = "Case for " + reqObj.email + " created successfully in Desk.";
 					post(data, node, msg);
-				} else {
+				} else {					
 					if(data.hasOwnProperty('message')) {
 						errMsg = data.message;
 					}
-					emitter.emit('error', errMsg, args.data, url, node);
+					if(data.hasOwnProperty('errors')) {
+						errMsg = data.errors;
+						if(data.errors.hasOwnProperty('emails')) {
+							errMsg = 'Email ' + reqObj.email + ' has already ' + data.errors.emails[0].value[0];
+						}
+					}
+					emitter.emit('error', errMsg, data, url, node);
 				}
 			} catch(e) {
 				emitter.emit('error', e,message, e.stack, url, node);
@@ -181,17 +187,17 @@ function postCustomer(url, node, type) {
 				if(status == 2) {
 					msg = "Customer for " + reqObj.email + " created successfully in Desk.";
 					post(data, node, msg);
-				} else {
+				} else {					
+					if(data.hasOwnProperty('message')) {
+						errMsg = data.message;
+					}
 					if(data.hasOwnProperty('errors')) {
 						errMsg = data.errors;
 						if(data.errors.hasOwnProperty('emails')) {
 							errMsg = 'Email ' + reqObj.email + ' has already ' + data.errors.emails[0].value[0];
 						}
 					}
-					if(data.hasOwnProperty('message')) {
-						errMsg = data.message;
-					}
-					emitter.emit('error', errMsg, args.data, url, node);
+					emitter.emit('error', errMsg, data, url, node);
 				}
 			} catch(e) {
 				emitter.emit('error', e,message, e.stack, url, node);
@@ -261,7 +267,7 @@ function updateStoreData(url, node, type) {
 						if(data.hasOwnProperty('message')) {
 							errMsg = data.message;
 						}
-						emitter.emit('error', errMsg, args.data, url, node);
+						emitter.emit('error', errMsg, data, url, node);
 					}
 				} catch(e) {
 					emitter.emit('error', e.message, e.stack, url, node);
@@ -298,7 +304,10 @@ function getCustomerId(url, node, type, callback) {
 							callback(id);
 						}
 					} else {
-						emitter.emit('error', data, args.data, newUrl, node);
+						if(data.hasOwnProperty('message')) {
+							errMsg = data.message;
+						}
+						emitter.emit('error', errMsg, data, newUrl, node);
 					}
 				} catch(e) {
 					emitter.emit('error', e.message, e.stack, '', node);

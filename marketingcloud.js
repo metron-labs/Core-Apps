@@ -2,7 +2,7 @@ var Client = require('node-rest-client').Client;
 var async = require('async');
 var client = new Client();
 
-var emitter = require('../javascripts/emitter');
+var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var clientId, clientSecret, customerKey, fromName, fromAddress, accessToken, fileUrl;
 var errMsg = 'Something went wrong in the request';
