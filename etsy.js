@@ -60,22 +60,14 @@ function getCountries(oauth, node, dataArr) {
 function getStoreData(oauth, node) {
     try {
         var url = baseUrl + 'shops/' + shopId + '/receipts?page=' + page + '&limit=5';   
-       if(node.optionType.toLowerCase() == 'new') {
+        if(node.optionType.toLowerCase() == 'new') {
             var pathStartTime = node.connection.startedAt;
             var arr = pathStartTime.split('/');
             var formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
-            var startDate = new Date(formattedDateStr);
-            var epochTime = startDate.getTime()/1000.0;
-            var instanceTime = node.connection.instanceStartTime;
-            arr = instanceTime.split('/');
-            formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
-            var thirtyMinutesBefore = new Date(formattedDateStr);
-            thirtyMinutesBefore.setMinutes(thirtyMinutesBefore.getMinutes() - 30);
-            if(thirtyMinutesBefore.getTime() > startDate.getTime()) {
-                epochTime = thirtyMinutesBefore.getTime()/1000.0;
-            }
-           url = baseUrl + 'shops/' + shopId + '/receipts?min_created=' + epochTime + '&page=' + page;
-        }    
+            var date = new Date(formattedDateStr);
+            var epochTime = date.getTime()/1000.0;
+            url = baseUrl + '/shops/' + shopId + '/receipts?min_created=' + epochTime + '&page=' + page;
+        }   
         oauth.get(url, token, tokenSecret, function(err, data, res) {
             try {
                 if(err){

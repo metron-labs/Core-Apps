@@ -28,7 +28,16 @@ function getStoreData(type, node) {
 			try {
 				var status = parseInt(res.statusCode/100);
 				if(status == 2) {
-					setCoreCustomers(data.members, node);
+					if(data.hasOwnProperty('ok')) {
+						if(data.ok) {
+							setCoreCustomers(data.members, node);
+						} else {
+							errMsg = data.error;
+							emitter.emit('error', errMsg, data, url, node);
+						}
+					}					
+				} else {
+					emitter.emit('error', errMsg, data, url, node);
 				}
 			}  catch(e) {
         		emitter.emit('error', e.message, e.stack, url, node);
@@ -90,12 +99,18 @@ function postInvite(node, type) {
 			try {
 				var status = parseInt(res.statusCode/100);
 				var msg;
-				if(status == 2) {
-					msg = "Invite email has been sent successfully to " + reqObj.email + " from Slack"; 
-					post(data, node, msg);
+				if(status == 2) {					
+					if(data.hasOwnProperty('ok')) {
+						if(data.ok) {
+							msg = "Invite email has been sent successfully to " + reqObj.email + " from Slack"; 
+							post(data, node, msg);
+						} else {
+							errMsg = data.error;
+							emitter.emit('error', errMsg, data, url, node);
+						}	
+					}	
 				} else {
 					emitter.emit('error', errMsg, data, url, node);
-
 				}
 			} catch(e) {
 				emitter.emit('error', e.message, e.stack, url, node)
@@ -113,14 +128,21 @@ function postMessage(type, node) {
 		var reqObj = node.reqData;
 		var msgFlag = reqObj.slackFlag;
 		if(msgFlag) {
-			var url = "https://slack.com/api/chat.postMessage?token=" + tokenSecret + "&channel=" + storeId + "&text=" + encodeURIComponent(message) + "&userName=" + userName;
+			var url = "https://slack.com/api/chat.postMessage?token=" + tokenSecret + "&channel=" + storeId + "&text=" + encodeURIComponent(message) + "&username=" + userName;
 			client.post(url, function(data, res) { 
 				try {
 					var status = parseInt(res.statusCode/100);
 					var msg;
 					if(status == 2) {
-						msg = "Message has been sent successfully to the Channel with id " + storeId + " in Slack";
-						post(data, node, msg);
+						if(data.hasOwnProperty('ok')) {
+							if(data.ok) {
+								msg = "Message has been sent successfully to the Channel with id " + storeId + " in Slack";
+								post(data, node, msg);
+							} else {
+								errMsg = data.error;
+								emitter.emit('error', errMsg, data, url, node);
+							}	
+						}					
 					} else {
 						emitter.emit('error', errMsg, data, url, node);
 					}
@@ -145,10 +167,19 @@ function testApp(callback) {
 			try {
 				var statusCode = parseInt(res.statusCode/100);
 				if(statusCode == 2) {
-					result = {
-						status : 'success',
-						response : data
-					};
+					if(data.hasOwnProperty('ok')) { 
+						if(data.ok) {
+							result = {
+								status : 'success',
+								response : data
+							};
+						} else {
+							result = {
+								status : 'error',
+								response : data
+							};
+						}	
+					}			
 				} else {
 					result = {
 						status : 'error',
