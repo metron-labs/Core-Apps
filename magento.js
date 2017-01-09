@@ -25,6 +25,16 @@ function run(node) {
 				if (status == 2) {
 					token = data;
 					getOrders(node);
+				} else {
+					if(status == 5) {
+						emitter.emit('error', 'Server Error', '', "", node);
+					} else {
+						errMsg = data.message;
+						if(errMsg.includes('%resources')) {
+							errMsg.slice('%resources');
+						}
+						emitter.emit('error', errMsg, data, "", node);
+					}
 				}
 			} catch(e) {
 				emitter.emit('error', e.message, e.stack, "", node);
@@ -50,6 +60,16 @@ function getOrders(node) {
 				var status = parseInt(res.statusCode/100);
 				if(status == 2) {
 					setOrders(data.items, node);
+				} else {
+					if(status == 5) {
+						emitter.emit('error', 'Server Error', '', "", node);
+					} else {
+						errMsg = data.message;
+						if(errMsg.includes('%resources')) {
+							errMsg.slice('%resources');
+						}
+						emitter.emit('error', errMsg, data, "", node);
+					}
 				}
 			} catch(e) {
 				emitter.emit('error', e.message, e.stack, "", node);
@@ -91,7 +111,7 @@ function setOrders(ordersArr, node) {
 			billingAddress.firstName = obj.billing_address.firstname;
 			billingAddress.lastName = obj.billing_address.lastname;
 			billingAddress.company = obj.billing_address.company;
-			billingAddress.address = obj.billing_address.street[0];
+			billingAddress.street = obj.billing_address.street[0];
 			billingAddress.city = obj.billing_address.city;
 			billingAddress.country = obj.billing_address.country_id;
 			billingAddress.zip = obj.billing_address.postcode;
@@ -104,7 +124,7 @@ function setOrders(ordersArr, node) {
 			shippingAddress.firstName = obj.billing_address.firstname;
 			shippingAddress.lastName = obj.billing_address.lastname;
 			shippingAddress.company = obj.billing_address.company;
-			shippingAddress.address = obj.billing_address.street[0];
+			shippingAddress.street = obj.billing_address.street[0];
 			shippingAddress.city = obj.billing_address.city;
 			shippingAddress.country = obj.billing_address.country_id;
 			shippingAddress.zip = obj.billing_address.postcode;
@@ -181,7 +201,7 @@ function testApp(callback) {
 				callback({status : 'error', response : e.stack});
 			}
 		}).on('error', function(err) {
-			callback({status:"error", response:e.stack});	
+			callback({status:"error", response:err});	
 		});
 	} catch(e) {
 		callback({status:"error", response:e.stack});
