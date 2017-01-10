@@ -88,7 +88,7 @@ function setOrders(ordersArr, node) {
 	try {
 		var resArr = [];
 		var obj, resObj;
-		var actionName = node.connector.appName.toLowerCase();
+		var actionName = node.connection.actionName.toLowerCase();
 		if(ordersArr.length == 0) {
 			emitter.emit("error", "No data found in Magento", "", "", node);
 		}
@@ -154,11 +154,14 @@ function setOrders(ordersArr, node) {
 				itemsArr[j] = item;
 			}
 			resObj.items = itemsArr;
-			var slackFlag = false;
-			if(actionName == 'slack' && i == length - 1) {
-				slackFlag = true;
+			resObj.isLast = false;
+			resObj.slackFlag = false;
+			if(i == length-1) {
+				resObj.isLast = true;
+				if(actionName == 'slack') {
+					resObj.slackFlag = true;
+				}
 			}
-			resObj.slackFlag = slackFlag;
 			resArr[i] = resObj;			
 		}
 		post(resArr, node, "");
