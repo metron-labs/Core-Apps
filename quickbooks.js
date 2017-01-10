@@ -7,7 +7,7 @@ var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var consumerKey, consumerSecret, accessToken, tokenSecret, accountType, companyId, url,
 	incomeAccNo, incomeAccName, expenseAccNo, expenseAccName, assetAccNo, assetAccName;
-var errMsg = 'Something went wrong on the request';
+var errMsg = 'Error in connecting Quickbooks online';
 
 function run(node) {
 	try {
@@ -314,20 +314,20 @@ function postCustomer(url,  oauth, node, callback) {
 								if(error.hasOwnProperty('Message')) {
 									errMsg = error.Message;
 									if(error.hasOwnProperty('Detail')) {
-										errMsg += ': ' + error.Detail;
+										errMsg += error.Detail;
 									}
 								}							
 							}
 						}
-						emitter.emit('error',errMsg, args.data, url, node);
+						emitter.emit('error',errMsg, data, url, node);
 					}
 				} catch(e) {
 					emitter.emit('error',e.message, e.stack, "", node);
 				}          
 		    }).on('error',function(err) {
-					emitter.emit('error',errMsg, args.data, url, node);
+				emitter.emit('error',errMsg, err, url, node);
 			});
-		},3000);
+		}, 8000);
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
@@ -383,12 +383,12 @@ function postProduct(url, oauth, node, item, callback) {
 								if(error.hasOwnProperty('Message')) {
 									errMsg = error.Message;
 									if(error.hasOwnProperty('Detail')) {
-										errMsg += ': ' + error.Detail;
+										errMsg += error.Detail;
 									}
 								}							
 							}
 						}
-						emitter.emit('error',errMsg, args.data, url, node);
+						emitter.emit('error',errMsg, data, url, node);
 					}
 				} catch(e) {
 					emitter.emit('error',e.message, e.stack, "", node);
@@ -396,7 +396,7 @@ function postProduct(url, oauth, node, item, callback) {
 		    }).on('error',function(err) {
 		       emiitter.emit("error",errMsg, args.data, url, node);
 			});
-		},5000);
+		}, 8000);
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
@@ -451,7 +451,7 @@ function postInvoiceOrSalesReceipt(url, type, oauth, node) {
 				data: postData,
 				headers : {Authorization: auth,Accept: "application/json","Content-Type":"application/json"}
 			};
-			setTimeout(function(){
+			setTimeout(function() {
 				client.post(newUrl, args, function (data, res) {
 					try {
 						var status = parseInt(res.statusCode/100);
@@ -472,12 +472,12 @@ function postInvoiceOrSalesReceipt(url, type, oauth, node) {
 									if(error.hasOwnProperty('Message')) {
 										errMsg = error.Message;
 										if(error.hasOwnProperty('Detail')) {
-											errMsg += ': ' + error.Detail;
+											errMsg += error.Detail;
 										}
 									}							
 								}
 							}
-							emitter.emit('error',errMsg, args.data, url, node);
+							emitter.emit('error',errMsg, data, url, node);
 						}
 					} catch(e) {
 						emitter.emit('error',e.message, e.stack, "", node);
@@ -485,7 +485,7 @@ function postInvoiceOrSalesReceipt(url, type, oauth, node) {
 				}).on('error',function(err) {
 					emitter.emit('error',errMsg, args.data, newUrl, node);
 				});	
-			}, 3000);				
+			}, 8000);				
 		});	
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
@@ -496,30 +496,32 @@ function getCustomerId(url, oauth, node, callback) {
 	try {
 		var obj = node.reqData;
 		var customerRef = {};
-		var query = "select * from customer where DisplayName in ('" + obj.customerName +"')";
-		newUrl = url + companyId + "/query?query= "+encodeURIComponent(query);
-		oauth.get(newUrl, accessToken, tokenSecret, function(err, data, res) {
-			try {
-				if(err) {
-					emitter.emit('error',errMsg, "", newUrl, node);
-				} else {
-					var result = JSON.parse(data);
-					var queryRes = result.QueryResponse;
-					if( queryRes.hasOwnProperty("Customer")) {
-						var customer = result.QueryResponse.Customer[0];
-						customerRef.value = customer.Id;
-						customerRef.name = customer.DisplayName;
-						callback(customerRef);
+		var query = "select * from customer where DisplayName in ('" + obj.billingAddress.name +"')";
+		newUrl = url + companyId + "/query?query= " + encodeURIComponent(query);
+		setTimeout(function() {
+			oauth.get(newUrl, accessToken, tokenSecret, function(err, data, res) {
+				try {
+					if(err) {
+						emitter.emit('error',errMsg, "", newUrl, node);
 					} else {
-						postCustomer(url, oauth, node, function(ref) {
-							callback(ref);
-						});				
+						var result = JSON.parse(data);
+						var queryRes = result.QueryResponse;
+						if( queryRes.hasOwnProperty("Customer")) {
+							var customer = result.QueryResponse.Customer[0];
+							customerRef.value = customer.Id;
+							customerRef.name = customer.DisplayName;
+							callback(customerRef);
+						} else {
+							postCustomer(url, oauth, node, function(ref) {
+								callback(ref);
+							});				
+						}
 					}
+				} catch(e) {
+					emitter.emit('error',e.message, e.stack, "", node);
 				}
-			} catch(e) {
-				emitter.emit('error',e.message, e.stack, "", node);
-			}
-		});
+			});
+		}, 8000);
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
@@ -530,35 +532,36 @@ function getItemId(url, oauth, item, node, callback) {
 		var id = '';	
 		var query = "select * from item where Name in ('" + item.name + "')";		
 		var newUrl = url + companyId + "/query?query= " + encodeURIComponent(query);
-		oauth.get(newUrl, accessToken, tokenSecret, function(err, data, res) {
-			try {
-				if(err) {
-					emitter.emit('error',err, "", newUrl, node);
-				} else {
-					var result = JSON.parse(data);
-					var queryRes = result.QueryResponse;
-					if(queryRes.hasOwnProperty("Item")) {
-						var product = result.QueryResponse.Item[0];
-						id = product.Id;	
-						callback(id);			
+		setTimeout(function() {
+			oauth.get(newUrl, accessToken, tokenSecret, function(err, data, res) {
+				try {
+					if(err) {
+						emitter.emit('error',err, "", newUrl, node);
 					} else {
-						postProduct(url, oauth, node, item,function(prodId){
-							id = prodId;
-							callback(id);
-						});
+						var result = JSON.parse(data);
+						var queryRes = result.QueryResponse;
+						if(queryRes.hasOwnProperty("Item")) {
+							var product = result.QueryResponse.Item[0];
+							id = product.Id;	
+							callback(id);			
+						} else {
+							postProduct(url, oauth, node, item,function(prodId){
+								id = prodId;
+								callback(id);
+							});
+						}
 					}
+				} catch(e) {
+					emitter.emit('error',e.message, e.stack, "", node);
 				}
-			} catch(e) {
-				emitter.emit('error',e.message, e.stack, "", node);
-			}
-		});
+			});
+		}, 8000);
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }
 
 function post(Response, node,message) {
-	console.log("Quickbooks Response: %j", Response);
 	node.resData = Response;
 	emitter.emit('success',node,message);
 }

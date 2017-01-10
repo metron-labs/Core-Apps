@@ -6,7 +6,7 @@ var emitter = require('../core-integration-server-v2/javascripts/emitter');
 var apiKey, frontFileUrl, backFileUrl, textMessage;
 var offset = 0, count, finalDataArr = [];
 
-var errMsg = 'Something went wrong on the request';
+var errMsg = 'Error in connecting Lob';
 
 function run(node) {
 	try {

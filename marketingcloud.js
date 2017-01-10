@@ -5,7 +5,7 @@ var client = new Client();
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var clientId, clientSecret, customerKey, fromName, fromAddress, accessToken, fileUrl;
-var errMsg = 'Something went wrong in the request';
+var errMsg = 'Error in connecting MarketingCloud';
 
 function run(node) {
 	try {

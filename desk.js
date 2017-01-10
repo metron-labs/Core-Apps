@@ -3,7 +3,7 @@ var client = new Client();
 
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 var apiKey, apiPassword, siteName, caseSubject, fromEmail, subject, message;
-var errMsg = 'Something went wrong on the request';
+var errMsg = 'Error in connecting Desk';
 
 function run(node) {
 	try {

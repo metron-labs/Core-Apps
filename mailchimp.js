@@ -4,7 +4,7 @@ var client = new Client();
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var apiKey, listId, baseUrl;
-var errMsg = 'Something went wrong on the request';
+var errMsg = 'Error in connecting Mailchimp';
 
 function run(node) {
     try {

@@ -4,7 +4,7 @@ var client = new Client();
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var tokenSecret, storeId, message, userName;
-var errMsg = 'Something went wrong on the request';
+var errMsg = 'Error in connecting Slack';
 
 function run(node) {
 	try {

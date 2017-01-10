@@ -4,7 +4,7 @@ var client = new Client();
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var apiKey;
-var errMsg = 'Something went wrong on the request';
+var errMsg = 'Error in connecting Clearbit';
 
 function run(node) {
 	try {	

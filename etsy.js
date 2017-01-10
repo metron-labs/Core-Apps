@@ -9,7 +9,7 @@ var consumerKey, consumerSecret, token, tokenSecret, shopId;
 var page = 1;
 var finalDataArr = [];
 var countries = [];
-var errMsg = 'Something went wrong on the request';
+var errMsg = 'Error in connecting Etsy';
 var baseUrl = 'https://openapi.etsy.com/v2/';
 
 function run(node) {

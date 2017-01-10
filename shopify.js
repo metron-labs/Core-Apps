@@ -7,7 +7,7 @@ var emitter = require("../core-integration-server-v2/javascripts/emitter");
 var apiKey,apiPassword,storeName, actionName;
 var page = 1, count, finalDataArr = [];
 
-var errMsg = 'Something went wrong on the request';
+var errMsg = 'Error in connecting Shopify';
 
 function getDataCount(node) {
 	try {
@@ -40,12 +40,14 @@ function getDataCount(node) {
 					getStoreData(dataUrl, args, type, node);
 				} else {
 					errMsg = data.errors;
-					emitter.emit('error',errMsg,"", url, node);
+					emitter.emit('error', errMsg, data, newUrl, node);
 				}
 			} catch(e) {
-				emitter.emit('error',e.message, "", "", node);
+				emitter.emit('error',e.message, e.stack, newUrl, node);
 			}
-		})
+		}).on('error',function(err){
+	    	emitter.emit("error",errMsg,"", newUrl, node);
+	    });
 	} catch(e) {
 		emitter.emit('error',e.message, "", "", node);
 	}
@@ -79,16 +81,16 @@ function getStoreData(url, args, type, node) {
 					}
 				} else {
 					errMsg = data.errors;
-					emitter.emit('error',errMsg,"", url, node);
+					emitter.emit('error', errMsg, data, url, node);
 				}
 			} catch(e) {
-				emitter.emit('error',e.message, "", "", node);
+				emitter.emit('error', e.message, e.stack, "", node);
 			}
 		}).on('error',function(err){
-	    	emitter.emit("error",errMsg,"", url, node);
+	    	emitter.emit("error", errMsg, err, url, node);
 	    });
     } catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -205,7 +207,7 @@ function formOrder(dataArr, node) {
 		}
 		post(resArr, node,"");
 	} catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }
 
@@ -235,7 +237,7 @@ function formProduct(dataArr,node) {
 		}
 		post(resArr, node,"");
 	} catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }
 
@@ -250,15 +252,13 @@ function postDataModel(url, type, node) {
 			updateCustomer(url, node);
 		} else if(type == "order" && action == "create") {
 			getVariantsId(url, node);
-		} else if(type == "order" && action == "update") {
-			updateOrder(url, node);
 		} else if(type == "product" && action == "create") {
-			createProduct(url, node.reqData);
+			createProduct(url, node.reqData, node);
 		} else if(type == "product" && action == "update") {
 			getProductId(url, node, 'product');
 		}
 	} catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }
 
@@ -335,16 +335,16 @@ function createCustomer(url, node, callback) {
 							errMsg = 'Email ' + data.errors.email[0];
 						}			
 					}					
-					emitter.emit('error', errMsg, args.data, url, node);
+					emitter.emit('error', errMsg, data, url, node);
 				}
 			} catch(e) {
-				emitter.emit('error',e.message, "", "", node);
+				emitter.emit('error', e.message, e.stack, url, node);
 			}
 		}).on('error', function(err) {
-			emitter.emit('error', args.data, url, node);
+			emitter.emit('error', errMsg, err, url, node);
 		});
 	} catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }
 
@@ -413,17 +413,17 @@ function updateCustomer(url, node) {
 								errMsg = data.errors.customer_address;
 							}			
 						}					
-						emitter.emit('error', errMsg, args.data, url, node);
+						emitter.emit('error', errMsg, data, newUrl, node);
 					}
 				} catch(e) {
-					emitter.emit('error',e.message, "", "", node);
+					emitter.emit('error',e.message, e.stack, newUrl, node);
 				}
 			}).on('error', function(err) {
-				emitter.emit('error', args.data, url, node);
+				emitter.emit('error', errMsg, err, newUrl, node);
 			});
 		});		
 	} catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -450,16 +450,16 @@ function getCustomerId(url, node, callback) {
 					}
 				} else {
 					errMsg = data.errors;
-					emitter.emit('error', errMsg, "", newUrl, node);
+					emitter.emit('error', errMsg, data, newUrl, node);
 				}
 			} catch(e){
-				emitter.emit('error', e.message, "",newUrl, node);
+				emitter.emit('error', e.message, e.stack,newUrl, node);
 			}
 		}).on('error', function(err) {
-			emitter.emit('error', err, "",newUrl, node);
+			emitter.emit('error', errMsg, err, newUrl, node);
 		});
 	} catch(e) {
-		emitter.emit('error', e.message, "","", node);
+		emitter.emit('error', e.message, e.stack, '', node);
 	}
 }
 
@@ -500,16 +500,16 @@ function getProductId(url, node, tag, callback) {
 					}
 				} else {
 					errMsg = data.errors;
-					emitter.emit('error', errMsg, "", newUrl, node);
+					emitter.emit('error', errMsg, data, newUrl, node);
 				}
 			} catch(e){
-				emitter.emit('error', e.message, "",newUrl, node);
+				emitter.emit('error', e.message, e.stack,newUrl, node);
 			}
 		}).on('error', function(err) {
-			emitter.emit('error', err, "",newUrl, node);
+			emitter.emit('error', errMsg, err, newUrl, node);
 		});
 	} catch(e) {
-		emitter.emit('error', e.message, "","", node);
+		emitter.emit('error', e.message, e.stack,"", node);
 	}
 }
 
@@ -551,16 +551,16 @@ function updateProduct(url, obj, node, tag, callback) {
 					if(data.hasOwnProperty("errors")) {						
 							errMsg = data.errors;					
 					}
-					emitter.emit('error', errMsg, args.data, url, node);
+					emitter.emit('error', errMsg, data, newUrl, node);
 				}
 			} catch(e) {
-				emitter.emit('error',e.message, "", "", node);
+				emitter.emit('error',e.message, e.stack, newUrl, node);
 			}
 		}).on('error', function(err) {
-			emitter.emit('error', args.data, url, node);
+			emitter.emit('error', errMsg, err, newUrl, node);
 		});
 	} catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }
 
@@ -606,16 +606,16 @@ function createProduct(url, obj, node, callback) {
 					if(data.hasOwnProperty("errors")) {						
 							errMsg = data.errors;					
 					}
-					emitter.emit('error', errMsg, args.data, url, node);
+					emitter.emit('error', errMsg, data, url, node);
 				}
 			} catch(e) {
-				emitter.emit('error',e.message, "", "", node);
+				emitter.emit('error',e.message, e.stack, url, node);
 			}
 		}).on('error', function(err) {
-			emitter.emit('error', args.data, url, node);
+			emitter.emit('error', errMsg, err, url, node);
 		});
 	} catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }
 
@@ -634,11 +634,11 @@ function getVariantsId(url, node) {
 					}
 				});
 			} catch(e) {
-				emitter.emit('error',e.message, "", "", node);
+				emitter.emit('error', e.message, e.stack, "", node);
 			}
 		});
 	} catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -705,16 +705,16 @@ function createOrder(url, node) {
 					if(data.errors.hasOwnProperty("order")) {
 						errMsg = data.errors.order;
 					}
-					emitter.emit('error', errMsg, args.data, url, node);
+					emitter.emit('error', errMsg, data, newUrl, node);
 				}
 			} catch(e) {
-				emitter.emit('error',e.message, "", "", node);
+				emitter.emit('error', e.message, e.stack, "", node);
 			}
 		}).on('error', function(err) {
-			emitter.emit('error', args.data, url, node);
+			emitter.emit('error', errMsg, err, newUrl, node);
 		});
 	} catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -727,7 +727,7 @@ function run(node) {
 			getDataCount(node);			
 		}
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}	 	 	
 }
 
@@ -777,7 +777,7 @@ function init(node) {
     	storeName = credentials.storeName;
     	run(node);
     	} catch(e) {
-			emitter.emit('error',e.message, "", "", node);
+			emitter.emit('error',e.message, e.stack, "", node);
 		}
 }
 

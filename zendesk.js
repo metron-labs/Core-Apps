@@ -5,7 +5,7 @@ var client = new Client();
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var apiToken, agentMailId, subDomain, ticketSubject, ticketComment;
-var errMsg = 'Something went wrong on the request';
+var errMsg = 'Error in connecting  Zendesk';
 
 function run(node) {
 	try {

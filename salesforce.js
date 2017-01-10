@@ -7,7 +7,7 @@ var OAuth = require('oauth').OAuth2;
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var sfAccessToken, baseUrl, userName,password, clientId, clientSecret, securityToken;
-var errMsg = 'Something went wrong on the request';
+var errMsg = 'Error in connecting SalesForce';
 
 function run(node) {
 	try {

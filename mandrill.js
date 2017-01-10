@@ -4,7 +4,7 @@ var client = new Client();
  var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var apiKey, fromName, fromAddress, mailSubject, textMessage, sendAt, templateName;
-var errMsg = 'Something went wrong on the request';
+var errMsg = 'Error in connecting Mandrill';
 
 function run(node) {
 	try {

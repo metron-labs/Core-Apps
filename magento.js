@@ -3,12 +3,12 @@ var client = new Client();
 
 var emitter = require('../core-integration-server-v2/javascripts/emitter');;
 var url, userName, password, token;
-var errMsg = "Something went wrong on the request";
+var errMsg = "Error in connecting Magento";
 
 function run(node) {
 	try {
 		var type = node.option.toLowerCase();
-		var newurl = url + "/index.php/rest/V1/integration/admin/token";
+		var newUrl = url + "/index.php/rest/V1/integration/admin/token";
 		var resObj = node.reqData;
 		var args = {
 			data : {
@@ -19,7 +19,7 @@ function run(node) {
 				"Content-Type" : 'application/json'
 			}
 		};
-		client.post(newurl, args, function(data, res) {
+		client.post(newUrl, args, function(data, res) {
 			try {
 				var status = parseInt(res.statusCode/100);
 				if (status == 2) {
@@ -27,19 +27,21 @@ function run(node) {
 					getOrders(node);
 				} else {
 					if(status == 5) {
-						emitter.emit('error', 'Server Error', '', "", node);
+						emitter.emit('error', 'Server Error', data, '', node);
 					} else {
 						errMsg = data.message;
 						if(errMsg.includes('%resources')) {
 							errMsg.slice('%resources');
 						}
-						emitter.emit('error', errMsg, data, "", node);
+						emitter.emit('error', errMsg, data, newUrl, node);
 					}
 				}
 			} catch(e) {
-				emitter.emit('error', e.message, e.stack, "", node);
+				emitter.emit('error', e.message, e.stack, newUrl, node);
 			}
-		})
+		}).on('error', function(err) {
+			emitter.emit('error', errMsg, err, newUrl, node);
+		});
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}
@@ -62,20 +64,20 @@ function getOrders(node) {
 					setOrders(data.items, node);
 				} else {
 					if(status == 5) {
-						emitter.emit('error', 'Server Error', '', "", node);
+						emitter.emit('error', 'Server Error', data.toString(), newUrl, node);
 					} else {
 						errMsg = data.message;
 						if(errMsg.includes('%resources')) {
 							errMsg.slice('%resources');
 						}
-						emitter.emit('error', errMsg, data, "", node);
+						emitter.emit('error', errMsg, data, newUrl, node);
 					}
 				}
 			} catch(e) {
-				emitter.emit('error', e.message, e.stack, "", node);
+				emitter.emit('error', e.message, e.stack, newUrl, node);
 			}
 		}).on('error', function(err) {
-			emitter.emit('error', errMsg, args.data, url, node);
+			emitter.emit('error', errMsg, err, newUrl, node);
 		});
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
@@ -90,6 +92,7 @@ function setOrders(ordersArr, node) {
 		if(ordersArr.length == 0) {
 			emitter.emit("error", "No data found in Magento", "", "", node);
 		}
+		var length = ordersArr.length;
 		for(var i = 0; i < ordersArr.length; i++) {
 			resObj = {};
 			obj = ordersArr[i];
@@ -152,7 +155,7 @@ function setOrders(ordersArr, node) {
 			}
 			resObj.items = itemsArr;
 			var slackFlag = false;
-			if(actionName == 'slack' && i == 0) {
+			if(actionName == 'slack' && i == length - 1) {
 				slackFlag = true;
 			}
 			resObj.slackFlag = slackFlag;

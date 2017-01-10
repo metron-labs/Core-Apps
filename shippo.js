@@ -11,7 +11,7 @@ var shippoToken, fromName, fromPhone, fromCompany, fromStreet, fromCity,
  var netQuantity = 0;
 var arrayLength = 0;
 var finalDataArr = [];
-var errMsg = 'Something went wrong on the request';
+var errMsg = 'Error in connecting Shippo';
 
 function run(node) {
 	try {
