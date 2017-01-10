@@ -124,11 +124,14 @@ function formCustomer(dataArr, node) {
 			addr1.zip = obj.default_address.zip;
 			addr1.phone = obj.default_address.phone;
 			resObj.defaultAddress = addr1;
-			var slackFlag = false;
+			resObj.slackFlag = false;
 			if(actionName == 'slack' && i == 0) {
-				slackFlag = true;
-			}			
-			resObj.slackFlag = slackFlag;
+				resObj.slackFlag = true;
+			}
+			resObj.isLast = false;
+			if(i == dataArr.length-1) {
+				resObj.isLast = true;
+			}
 			resArr[i] = resObj;
 		}
 		post(resArr, node,"");
@@ -196,10 +199,15 @@ function formOrder(dataArr, node) {
 				items[j] = item;
 				quantity += itemObj.quantity;
 			}
-			var slackFlag = false;
+			resObj.slackFlag = false;
 			if(actionName == 'slack' && i == 0) {
-				slackFlag = true;
-			}			
+				resObj.slackFlag = true;
+			}
+			resObj.isLast = false;
+			if(i == dataArr.length-1) {
+				resObj.isLast = true;
+			}
+			resObj.isLast = isLast;			
 			resObj.slackFlag = slackFlag;
 			resObj.items = items;
 			resObj.quantity = quantity;
@@ -228,10 +236,14 @@ function formProduct(dataArr,node) {
 			resObj.sku = variants.sku;
 			resObj.price = variants.price;
 			resObj.qtyOnHand = variants.inventory_quantity;
-			var slackFlag = false;
+			resObj.slackFlag = false;
 			if(actionName == 'slack' && i == 0) {
-				slackFlag = true;
-			}			
+				resObj.slackFlag = true;
+			}
+			resObj.isLast = false;
+			if(i == dataArr.length-1) {
+				resObj.isLast = true;
+			}		
 			resObj.slackFlag = slackFlag;
 			resArr[i] = resObj;
 		}

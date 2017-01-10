@@ -149,6 +149,10 @@ function formOrder(dataArr, oauth, node) {
             billAddr.country = country;
             resObj.billingAddress = billAddr;
             resObj.shippingAddress = billAddr;
+            resObj.isLast = false;
+            if(page == null) {
+                resObj.isLast = true;
+            }
             resArr[i] = resObj;       
         }
         getItems(resArr, oauth, node);       
@@ -191,7 +195,7 @@ function getItems(dataArr, oauth, node) {
                         obj.items = items;
                         obj.name = obj.id;
                         obj.quantity = quantity;
-                        length--;   
+                        length--;                        
                     }
                     if(length == 0) {
                         post(dataArr, node, "");
