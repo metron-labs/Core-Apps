@@ -12,7 +12,7 @@ var errMsg = 'Error in connecting Shopify';
 function getDataCount(node) {
 	try {
 		var url = "https://" + storeName + ".myshopify.com/admin/";
-	    var type =  node.option.toLowerCase();
+	    	var type =  node.option.toLowerCase();
 		var newUrl;
 		var args = {
 	        headers:{ Authorization : "Basic " + b64EncodeUnicode(apiKey + ":" + apiPassword) }
@@ -263,7 +263,7 @@ function formProduct(dataArr,node) {
 	}
 }
 
-function postDataModel(url, type, node) {
+function postDataModel(node) {
 	try {
 		var action = node.optionType.toLowerCase();
 		var url = "https://"+storeName+".myshopify.com/admin/";
