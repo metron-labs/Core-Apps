@@ -339,32 +339,34 @@ function createCustomer(url, node, callback) {
 				Accept : 'application/json'
 			}
 		};
-		client.post(url, args, function(data, res) {
-			try {
-				var status = parseInt(res.statusCode/100);
-				if(status == 2) {
-					if(typeof callback == 'undefined') {
-						var msg = 'Customer with email ' + obj.email + ' has been created successfully in Shopify';
-						post(data, node, msg);
+		setTimeout(function() {
+			client.post(url, args, function(data, res) {
+				try {
+					var status = parseInt(res.statusCode/100);
+					if(status == 2) {
+						if(typeof callback == 'undefined') {
+							var msg = 'Customer with email ' + obj.email + ' has been created successfully in Shopify';
+							post(data, node, msg);
+						} else {
+							var msg = 'Customer with email ' + obj.email + ' has been updated successfully in Shopify';
+							post(data, node, msg);
+						}					
 					} else {
-						var msg = 'Customer with email ' + obj.email + ' has been updated successfully in Shopify';
-						post(data, node, msg);
-					}					
-				} else {
-					if(data.hasOwnProperty("errors")) {
-						errMsg = data.errors;						
-						if(data.errors.hasOwnProperty("email")) {
-							errMsg = 'Email ' + data.errors.email[0];
-						}			
-					}					
-					emitter.emit('error', errMsg, data, url, node);
+						if(data.hasOwnProperty("errors")) {
+							errMsg = data.errors;						
+							if(data.errors.hasOwnProperty("email")) {
+								errMsg = 'Email ' + data.errors.email[0];
+							}			
+						}					
+						emitter.emit('error', errMsg, data, url, node);
+					}
+				} catch(e) {
+					emitter.emit('error', e.message, e.stack, url, node);
 				}
-			} catch(e) {
-				emitter.emit('error', e.message, e.stack, url, node);
-			}
-		}).on('error', function(err) {
-			emitter.emit('error', errMsg, err, url, node);
-		});
+			}).on('error', function(err) {
+				emitter.emit('error', errMsg, err, url, node);
+			});
+		}, 5000);
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
@@ -412,8 +414,7 @@ function updateCustomer(url, node) {
 	        		zip : zip,		        		
 	        		country:country					
 				}
-			};
-			
+			};			
 			var args = {
 				data : postData,
 				headers : {
@@ -422,27 +423,29 @@ function updateCustomer(url, node) {
 					Accept : 'application/json'
 				}
 			};
-			client.put(newUrl, args, function(data, res) {
-				try {
-					var status = parseInt(res.statusCode/100);
-					if(status == 2) {
-						var msg = 'Customer with email ' + obj.email + ' has been updated successfully in Shopify';
-						post(data, node, msg);
-					} else {
-						if(data.hasOwnProperty("errors")) {
-							errMsg = data.errors;						
-							if(data.errors.hasOwnProperty("customer_address")) {
-								errMsg = data.errors.customer_address;
-							}			
-						}					
-						emitter.emit('error', errMsg, data, newUrl, node);
+			setTimeout(function() {
+				client.put(newUrl, args, function(data, res) {
+					try {
+						var status = parseInt(res.statusCode/100);
+						if(status == 2) {
+							var msg = 'Customer with email ' + obj.email + ' has been updated successfully in Shopify';
+							post(data, node, msg);
+						} else {
+							if(data.hasOwnProperty("errors")) {
+								errMsg = data.errors;						
+								if(data.errors.hasOwnProperty("customer_address")) {
+									errMsg = data.errors.customer_address;
+								}			
+							}					
+							emitter.emit('error', errMsg, data, newUrl, node);
+						}
+					} catch(e) {
+						emitter.emit('error',e.message, e.stack, newUrl, node);
 					}
-				} catch(e) {
-					emitter.emit('error',e.message, e.stack, newUrl, node);
-				}
-			}).on('error', function(err) {
-				emitter.emit('error', errMsg, err, newUrl, node);
-			});
+				}).on('error', function(err) {
+					emitter.emit('error', errMsg, err, newUrl, node);
+				});
+			}, 5000);
 		});		
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
@@ -457,29 +460,31 @@ function getCustomerId(url, node, callback) {
 		var args = {
 			headers : { Authorization : 'Basic ' + b64EncodeUnicode(apiKey + ':' + apiPassword)}
 		};
-		client.get(newUrl, args, function(data, res) {
-			try {
-				var status = parseInt(res.statusCode/100);
-				if(status == 2) {
-					var customers = data.customers;
-					if(customers.length == 0) {
-						createCustomer(url,node, function(id) {
-							callback(id);
-						});
-					} else {						
-						var customerId = customers[0].id;		
-						callback(customerId);
+		setTimeout(function() {
+			client.get(newUrl, args, function(data, res) {
+				try {
+					var status = parseInt(res.statusCode/100);
+					if(status == 2) {
+						var customers = data.customers;
+						if(customers.length == 0) {
+							createCustomer(url,node, function(id) {
+								callback(id);
+							});
+						} else {						
+							var customerId = customers[0].id;		
+							callback(customerId);
+						}
+					} else {
+						errMsg = data.errors;
+						emitter.emit('error', errMsg, data, newUrl, node);
 					}
-				} else {
-					errMsg = data.errors;
-					emitter.emit('error', errMsg, data, newUrl, node);
+				} catch(e){
+					emitter.emit('error', e.message, e.stack,newUrl, node);
 				}
-			} catch(e){
-				emitter.emit('error', e.message, e.stack,newUrl, node);
-			}
-		}).on('error', function(err) {
-			emitter.emit('error', errMsg, err, newUrl, node);
-		});
+			}).on('error', function(err) {
+				emitter.emit('error', errMsg, err, newUrl, node);
+			});
+		}, 5000);
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, '', node);
 	}
@@ -498,38 +503,40 @@ function getProductId(url, node, tag, callback) {
 		var args = {
 			headers : { Authorization : 'Basic ' + b64EncodeUnicode(apiKey + ':' + apiPassword)}
 		};
-		client.get(newUrl, args, function(data, res) {
-			try {
-				var status = parseInt(res.statusCode/100);
-				if(status == 2) {
-					var products = data.products;
-					if(products.length == 0) {
-						createProduct(url,item, function(id) {
-							callback(id);
-						});
-					} else {
-						var variants = products[0].variants[0];
-						variantId = variants.id;
-						if(item.hasOwnProperty('sku') && item.sku != '') {
-							if(variants.sku != item.sku) {
-								updateProduct(url, item, tag, callback);
-							} else {
+		setTimeout(function() {
+			client.get(newUrl, args, function(data, res) {
+				try {
+					var status = parseInt(res.statusCode/100);
+					if(status == 2) {
+						var products = data.products;
+						if(products.length == 0) {
+							createProduct(url,item, function(id) {
+								callback(id);
+							});
+						} else {
+							var variants = products[0].variants[0];
+							variantId = variants.id;
+							if(item.hasOwnProperty('sku') && item.sku != '') {
+								if(variants.sku != item.sku) {
+									updateProduct(url, item, tag, callback);
+								} else {
+									callback(variantId);
+								}
+							} else {						
 								callback(variantId);
 							}
-						} else {						
-							callback(variantId);
 						}
+					} else {
+						errMsg = data.errors;
+						emitter.emit('error', errMsg, data, newUrl, node);
 					}
-				} else {
-					errMsg = data.errors;
-					emitter.emit('error', errMsg, data, newUrl, node);
+				} catch(e){
+					emitter.emit('error', e.message, e.stack,newUrl, node);
 				}
-			} catch(e){
-				emitter.emit('error', e.message, e.stack,newUrl, node);
-			}
-		}).on('error', function(err) {
-			emitter.emit('error', errMsg, err, newUrl, node);
-		});
+			}).on('error', function(err) {
+				emitter.emit('error', errMsg, err, newUrl, node);
+			});
+		}, 5000);
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack,"", node);
 	}
@@ -558,29 +565,31 @@ function updateProduct(url, obj, node, tag, callback) {
 				Accept : 'application/json'
 			}
 		};
-		client.put(newUrl, args, function(data, res) {
-			try {
-				var status = parseInt(res.statusCode/100);
-				if(status == 2) {
-					if(tag.toLowerCase() == 'product') {
-						var msg = "Product " + obj.name +' has been updated successfully in Shopify';
-						post(data, node, msg);
+		setTimeout(function() {
+			client.put(newUrl, args, function(data, res) {
+				try {
+					var status = parseInt(res.statusCode/100);
+					if(status == 2) {
+						if(tag.toLowerCase() == 'product') {
+							var msg = "Product " + obj.name +' has been updated successfully in Shopify';
+							post(data, node, msg);
+						} else {
+							var variants = data.product.variants[0];
+							callback(variants.id);
+						}					
 					} else {
-						var variants = data.product.variants[0];
-						callback(variants.id);
-					}					
-				} else {
-					if(data.hasOwnProperty("errors")) {						
-							errMsg = data.errors;					
+						if(data.hasOwnProperty("errors")) {						
+								errMsg = data.errors;					
+						}
+						emitter.emit('error', errMsg, data, newUrl, node);
 					}
-					emitter.emit('error', errMsg, data, newUrl, node);
+				} catch(e) {
+					emitter.emit('error',e.message, e.stack, newUrl, node);
 				}
-			} catch(e) {
-				emitter.emit('error',e.message, e.stack, newUrl, node);
-			}
-		}).on('error', function(err) {
-			emitter.emit('error', errMsg, err, newUrl, node);
-		});
+			}).on('error', function(err) {
+				emitter.emit('error', errMsg, err, newUrl, node);
+			});
+		}, 5000);
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
@@ -613,29 +622,31 @@ function createProduct(url, obj, node, callback) {
 				Accept : 'application/json'
 			}
 		};
-		client.post(url, args, function(data, res) {
-			try {
-				var status = parseInt(res.statusCode/100);
-				if(status == 2) {
-					if(typeof callback == 'undefined') {
-						var msg = "Product " + obj.name +' has been created successfully in Shopify';
-						post(data, node, msg);
+		setTimeout(function() {
+			client.post(url, args, function(data, res) {
+				try {
+					var status = parseInt(res.statusCode/100);
+					if(status == 2) {
+						if(typeof callback == 'undefined') {
+							var msg = "Product " + obj.name +' has been created successfully in Shopify';
+							post(data, node, msg);
+						} else {
+							var variants = data.product.variants[0];
+							callback(variants.id);
+						}					
 					} else {
-						var variants = data.product.variants[0];
-						callback(variants.id);
-					}					
-				} else {
-					if(data.hasOwnProperty("errors")) {						
-							errMsg = data.errors;					
+						if(data.hasOwnProperty("errors")) {						
+								errMsg = data.errors;					
+						}
+						emitter.emit('error', errMsg, data, url, node);
 					}
-					emitter.emit('error', errMsg, data, url, node);
+				} catch(e) {
+					emitter.emit('error',e.message, e.stack, url, node);
 				}
-			} catch(e) {
-				emitter.emit('error',e.message, e.stack, url, node);
-			}
-		}).on('error', function(err) {
-			emitter.emit('error', errMsg, err, url, node);
-		});
+			}).on('error', function(err) {
+				emitter.emit('error', errMsg, err, url, node);
+			});
+		}, 5000);
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
@@ -716,25 +727,27 @@ function createOrder(url, node) {
 				Accept : 'application/json'
 			}
 		};
-		client.post(newUrl, args, function(data, res) {
-			try {
-				var status = parseInt(res.statusCode/100);
-				if(status == 2) {
-					var msg = 'Order for the customer with email ' + obj.email + ' has been created successfully in Shopify';
-					post(data, node);
-				} else {
-					errMsg = data.errors;
-					if(data.errors.hasOwnProperty("order")) {
-						errMsg = data.errors.order;
+		setTimeout(function() {
+			client.post(newUrl, args, function(data, res) {
+				try {
+					var status = parseInt(res.statusCode/100);
+					if(status == 2) {
+						var msg = 'Order for the customer with email ' + obj.email + ' has been created successfully in Shopify';
+						post(data, node);
+					} else {
+						errMsg = data.errors;
+						if(data.errors.hasOwnProperty("order")) {
+							errMsg = data.errors.order;
+						}
+						emitter.emit('error', errMsg, data, newUrl, node);
 					}
-					emitter.emit('error', errMsg, data, newUrl, node);
+				} catch(e) {
+					emitter.emit('error', e.message, e.stack, "", node);
 				}
-			} catch(e) {
-				emitter.emit('error', e.message, e.stack, "", node);
-			}
-		}).on('error', function(err) {
-			emitter.emit('error', errMsg, err, newUrl, node);
-		});
+			}).on('error', function(err) {
+				emitter.emit('error', errMsg, err, newUrl, node);
+			});
+		}, 5000);
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}
