@@ -129,7 +129,8 @@ function formCustomer(dataArr, node) {
 				resObj.slackFlag = true;
 			}
 			resObj.isLast = false;
-			if(i == dataArr.length-1) {
+			var length = finalDataArr.length + i;
+			if(length == count) {
 				resObj.isLast = true;
 			}
 			resArr[i] = resObj;
@@ -204,16 +205,20 @@ function formOrder(dataArr, node) {
 				resObj.slackFlag = true;
 			}
 			resObj.isLast = false;
-			if(i == dataArr.length-1) {
+			var length = finalDataArr.length + i;
+			if(length == count) {
 				resObj.isLast = true;
 			}
-			resObj.isLast = isLast;			
-			resObj.slackFlag = slackFlag;
 			resObj.items = items;
 			resObj.quantity = quantity;
 			resArr[i] = resObj;
 		}
 		post(resArr, node,"");
+		finalDataArr = finalDataArr.concat(resArr);
+		if(finalDataArr.length != count) {
+			page++;
+			getDataCount(node);
+		}
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
@@ -241,13 +246,18 @@ function formProduct(dataArr,node) {
 				resObj.slackFlag = true;
 			}
 			resObj.isLast = false;
-			if(i == dataArr.length-1) {
+			var length = finalDataArr.length + i;
+			if(length == count) {
 				resObj.isLast = true;
-			}		
-			resObj.slackFlag = slackFlag;
+			}
 			resArr[i] = resObj;
 		}
 		post(resArr, node,"");
+		finalDataArr = finalDataArr.concat(resArr);
+		if(finalDataArr.length != count) {
+			page++;
+			getDataCount(node);
+		}
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
