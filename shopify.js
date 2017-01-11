@@ -1,5 +1,6 @@
 var Client = require('node-rest-client').Client;
 var async = require('async');
+var moment = require('moment-timezone');
 var client = new Client();
 
 var emitter = require("../core-integration-server-v2/javascripts/emitter");
@@ -562,6 +563,10 @@ function getProductId(url, node, tag, callback) {
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack,"", node);
 	}
+}
+
+function toTimeZone(time, format, zone) {
+    return moment(time).tz(zone).format(format);
 }
 
 function updateProduct(url, obj, node, tag, callback) {
