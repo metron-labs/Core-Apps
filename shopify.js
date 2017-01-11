@@ -12,17 +12,36 @@ var errMsg = 'Error in connecting Shopify';
 function getDataCount(node) {
 	try {
 		var url = "https://" + storeName + ".myshopify.com/admin/";
-	    	var type =  node.option.toLowerCase();
+		var type =  node.option.toLowerCase();
 		var newUrl;
+		var filterDate = null;
 		var args = {
-	        headers:{ Authorization : "Basic " + b64EncodeUnicode(apiKey + ":" + apiPassword) }
-	    };	    
-	    if(type == "customer") {
-	    	newUrl = url + "customers/count.json";
+			headers:{ Authorization : "Basic " + b64EncodeUnicode(apiKey + ":" + apiPassword) }
+		};	    
+		if(type == "customer") {
+			newUrl = url + "customers/count.json";
 		} else if(type == "product") {
 			newUrl = url + "products/count.json";
 		} else {
 			newUrl = url + "orders/count.json";
+		}
+		if(node.optionType.toLowerCase() == 'new') {
+			var pathStartTime = node.connection.startedAt;
+			var arr = pathStartTime.split('/');
+			var formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
+			var startDate = new Date(formattedDateStr);
+			filterDate = toTimeZone(startDate, "YYYY-MM-DDTHH:mm:ssZ", "EDT");
+			var instanceTime = node.connection.instanceStartTime;
+			arr = instanceTime.split('/');
+			formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
+			var thirtyMinutesBefore = new Date(formattedDateStr);
+			thirtyMinutesBefore.setMinutes(thirtyMinutesBefore.getMinutes() - 30);
+			if(thirtyMinutesBefore.getTime() > startDate.getTime()) {
+				filterDate = toTimeZone(thirtyMinutesBefore, "YYYY-MM-DDTHH:mm:ssZ", "EDT");
+			}  
+		}
+		if(filterDate != null) {
+			newUrl += "?created_at_min=" + filterDate;
 		}
 		client.get(newUrl, args, function(data, res) {
 			try {
@@ -31,11 +50,14 @@ function getDataCount(node) {
 					count = data.count;
 					var dataUrl;
 					if(type == "customer") {
-				    	dataUrl = url + "customers.json?page=" + page + '&limit=10';
+						dataUrl = url + "customers.json?page=" + page + '&limit=10';
 					} else if(type == "product") {
 						dataUrl = url + "products.json?page=" + page + '&limit=10';
 					} else {
 						dataUrl = url + "orders.json?page=" + page + '&limit=10';
+					}
+					if(filterDate != null) {
+						dataUrl += "&created_at_min=" + filterDate;
 					}
 					getStoreData(dataUrl, args, type, node);
 				} else {
@@ -46,8 +68,8 @@ function getDataCount(node) {
 				emitter.emit('error',e.message, e.stack, newUrl, node);
 			}
 		}).on('error',function(err){
-	    	emitter.emit("error",errMsg,"", newUrl, node);
-	    });
+			emitter.emit("error",errMsg,"", newUrl, node);
+		});
 	} catch(e) {
 		emitter.emit('error',e.message, "", "", node);
 	}
@@ -87,15 +109,15 @@ function getStoreData(url, args, type, node) {
 				emitter.emit('error', e.message, e.stack, "", node);
 			}
 		}).on('error',function(err){
-	    	emitter.emit("error", errMsg, err, url, node);
-	    });
-    } catch(e) {
+			emitter.emit("error", errMsg, err, url, node);
+		});
+	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
 function b64EncodeUnicode(str) {
-   	return new Buffer(str).toString('base64');
+	return new Buffer(str).toString('base64');
 }
 
 function formCustomer(dataArr, node) {
@@ -267,7 +289,7 @@ function postDataModel(node) {
 	try {
 		var action = node.optionType.toLowerCase();
 		var url = "https://"+storeName+".myshopify.com/admin/";
-	    var type =  node.option.toLowerCase();
+		var type =  node.option.toLowerCase();
 		if(type == "customer" && action == "create") {
 			createCustomer(url, node);
 		} else if(type == "customer" && action == "update") {
@@ -321,12 +343,12 @@ function createCustomer(url, node, callback) {
 				addresses : [{
 					address1 : street,
 					city : city,
-	        		province : state,
-	       			phone : phone,
-	        		zip : zip,
-	        		last_name : lastName,
-	                first_name: name,
-	        		country:country
+					province : state,
+					phone : phone,
+					zip : zip,
+					last_name : lastName,
+					first_name: name,
+					country:country
 				}],
 				"send_email_welcome": false
 			}
@@ -406,13 +428,13 @@ function updateCustomer(url, node) {
 				address : {
 					id : addressId,
 					last_name : lastName,
-	                first_name: name,
+					first_name: name,
 					address1 : street,
 					city : city,
-	        		province : state,
-	       			phone : phone,
-	        		zip : zip,		        		
-	        		country:country					
+					province : state,
+					phone : phone,
+					zip : zip,		        		
+					country:country					
 				}
 			};			
 			var args = {
@@ -579,7 +601,7 @@ function updateProduct(url, obj, node, tag, callback) {
 						}					
 					} else {
 						if(data.hasOwnProperty("errors")) {						
-								errMsg = data.errors;					
+							errMsg = data.errors;					
 						}
 						emitter.emit('error', errMsg, data, newUrl, node);
 					}
@@ -636,7 +658,7 @@ function createProduct(url, obj, node, callback) {
 						}					
 					} else {
 						if(data.hasOwnProperty("errors")) {						
-								errMsg = data.errors;					
+							errMsg = data.errors;					
 						}
 						emitter.emit('error', errMsg, data, url, node);
 					}
@@ -770,30 +792,30 @@ function testApp(callback) {
 	try {
 		var url = "https://"+storeName+".myshopify.com/admin/customers.json";
 		var args = {
-	        headers:{ Authorization : "Basic " + b64EncodeUnicode(apiKey + ":" + apiPassword) }
-	    };
-	    var result;
-	    client.get(url, args, function(data, res) {
-	    	try {
-		    	var statusCode = parseInt(res.statusCode/100);    	
-		    	if( statusCode == 2 ){
-		    		result = {
-		    			status : 'success',
-		    			response : data
-		    		};
-		    	} else {
-		    		result = {
-		    			status : 'error',
-		    			response : data.errors
-		    		};
-		    	}
-		    	callback(result);
-	    	} catch(e) {
+			headers:{ Authorization : "Basic " + b64EncodeUnicode(apiKey + ":" + apiPassword) }
+		};
+		var result;
+		client.get(url, args, function(data, res) {
+			try {
+				var statusCode = parseInt(res.statusCode/100);    	
+				if( statusCode == 2 ){
+					result = {
+						status : 'success',
+						response : data
+					};
+				} else {
+					result = {
+						status : 'error',
+						response : data.errors
+					};
+				}
+				callback(result);
+			} catch(e) {
 				callback({status:"error", response:e.stack});
 			}
-	    }).on('error', function(err) {
+		}).on('error', function(err) {
 			callback({status:"error", response:err});
-	    });
+		});
 	} catch(e) {
 		callback({status:"error", response:e.stack});
 	}
@@ -806,24 +828,24 @@ function post(resArr, node, message) {
 
 function init(node) {
 	try {
-   		var credentials = node.credentials;
+		var credentials = node.credentials;
 		apiKey = credentials.apiKey;
-    	apiPassword = credentials.password;
-    	storeName = credentials.storeName;
-    	run(node);
-    	} catch(e) {
-			emitter.emit('error',e.message, e.stack, "", node);
-		}
+		apiPassword = credentials.password;
+		storeName = credentials.storeName;
+		run(node);
+	} catch(e) {
+		emitter.emit('error',e.message, e.stack, "", node);
+	}
 }
 
 function test(request, callback) {
 	try {
 		var credentials = request.credentials;
 		apiKey = credentials.apiKey;
-    	apiPassword = credentials.password;
-    	storeName = credentials.storeName;
-    	testApp(callback);
-    } catch(e) {
+		apiPassword = credentials.password;
+		storeName = credentials.storeName;
+		testApp(callback);
+	} catch(e) {
 		callback({status:"error", response:e.stack});
 	}
 }
