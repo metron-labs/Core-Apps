@@ -60,7 +60,7 @@ function getCountries(oauth, node, dataArr) {
 function getStoreData(oauth, node) {
     try {
         var url = baseUrl + 'shops/' + shopId + '/receipts?page=' + page + '&limit=5';   
-       if(node.optionType.toLowerCase() == 'new') {
+        if(node.optionType.toLowerCase() == 'new') {
             var pathStartTime = node.connection.startedAt;
             var arr = pathStartTime.split('/');
             var formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
@@ -87,7 +87,7 @@ function getStoreData(oauth, node) {
                 } else {
                     var result = JSON.parse(data);
                     if(result.results.length == 0 && page == 1) {
-                        emitter.emit('error', 'No orders found', data, url, node);
+                        emitter.emit('error', 'No orders found in Etsy', data, url, node);
                         return;
                     }
                     if(countries.length == 0) {
@@ -164,53 +164,54 @@ function formOrder(dataArr, oauth, node) {
 function getItems(dataArr, oauth, node) {
     try {
         var length = dataArr.length;
-        var items = [];   
+        var items = [];  
         dataArr.forEach(function(obj) {
             var url = baseUrl +  'receipts/' + obj.name + '/transactions';
-            oauth.get(url, token, tokenSecret, function(err, data, res) {
-                try {
-                    if(err) {
-                        console.log('error.....items.....',err);
-                        length--;
-                        if(err.hasOwnProperty("data")) {
-                            emitter.emit("error", err.data, err, url, node);
-                        } else {
-                            emitter.emit("error", err, err, url, node);
+            setTimeout(function() {
+                oauth.get(url, token, tokenSecret, function(err, data, res) {
+                    try {
+                        if(err) {
+                            length--;
+                            if(err.hasOwnProperty("data")) {
+                                emitter.emit("error", err.data, err, url, node);
+                            } else {
+                                emitter.emit("error", err, err, url, node);
+                            }
+                        } else {                  
+                            var quantity = 0;                      
+                            var response = JSON.parse(data);
+                            var itemArr = response.results;
+                            var itemObj, item;              
+                            for(var i = 0; i < itemArr.length; i++) {
+                                itemObj = itemArr[i];
+                                item = {};
+                                item.id = itemObj.listing_id;
+                                item.name = itemObj.title;
+                                item.price = itemObj.price;
+                                item. quantity = itemObj.quantity;
+                                items[i] = item;
+                                quantity += itemObj.quantity;
+                            }
+                            obj.items = items;
+                            obj.name = obj.id;
+                            obj.quantity = quantity;
+                            length--;                       
                         }
-                    } else {                   
-                        var quantity = 0;                       
-                        var response = JSON.parse(data);
-                        var itemArr = response.results;
-                        var itemObj, item;               
-                        for(var i = 0; i < itemArr.length; i++) {
-                            itemObj = itemArr[i];
-                            item = {};
-                            item.id = itemObj.listing_id;
-                            item.name = itemObj.title;
-                            item.price = itemObj.price;
-                            item. quantity = itemObj.quantity;
-                            items[i] = item;
-                            quantity += itemObj.quantity;
+                        if(length == 0) {
+                            post(dataArr, node, "");
+                            if(page != null) {
+                                getStoreData(oauth, node);
+                            }
                         }
-                        obj.items = items;
-                        obj.name = obj.id;
-                        obj.quantity = quantity;
-                        length--;                        
+                    } catch(e) {
+                        emitter.emit('error', e.message, e.stack, url, node);
                     }
-                    if(length == 0) {
-                        post(dataArr, node, "");
-                        if(page != null) {
-                            getStoreData(oauth, node);
-                        }
-                    }
-                } catch(e) {
-                    emitter.emit('error', e.message, e.stack, url, node);
-                }
-            });
+                });
+            }, 5000);
         });
     } catch(e) {
-       emitter.emit('error',e.message, e.stack, "", node);
-    }
+     emitter.emit('error',e.message, e.stack, "", node);
+ }
 }
 
 function post(response, node, message) {

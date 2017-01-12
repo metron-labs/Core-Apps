@@ -64,7 +64,7 @@ function getOrders(node) {
 					setOrders(data.items, node);
 				} else {
 					if(status == 5) {
-						emitter.emit('error', 'Server Error', data.toString(), newUrl, node);
+						emitter.emit('error', 'Server Error in Magento', data.toString(), newUrl, node);
 					} else {
 						errMsg = data.message;
 						if(errMsg.includes('%resources')) {
@@ -90,12 +90,21 @@ function setOrders(ordersArr, node) {
 		var obj, resObj;
 		var actionName = node.connection.actionName.toLowerCase();
 		if(ordersArr.length == 0) {
-			emitter.emit("error", "No data found in Magento", "", "", node);
+			emitter.emit("error", "No orders found in Magento", "", "", node);
 		}
 		var length = ordersArr.length;
 		for(var i = 0; i < ordersArr.length; i++) {
 			resObj = {};
 			obj = ordersArr[i];
+			var pathStartTime = node.connection.startedAt;
+			var arr = pathStartTime.split('/');
+			var formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
+			var startDate = new Date(formattedDateStr);
+			var cDate = new Date(obj.created_at);
+			var cUTCDate = new Date(cDate);
+			if(cUTCDate.getTime() < startDate.getTime()) {
+				continue;
+			}
 			resObj.id = obj.increment_id;
 			resObj.email = obj.customer_email;
 			resObj.price = obj.base_subtotal;
@@ -162,7 +171,8 @@ function setOrders(ordersArr, node) {
 					resObj.slackFlag = true;
 				}
 			}
-			resArr[i] = resObj;			
+			var l = resArr.length;
+			resArr[l] = resObj;
 		}
 		post(resArr, node, "");
 	} catch(e) {

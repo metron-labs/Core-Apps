@@ -1,7 +1,8 @@
 var Client = require('node-rest-client').Client;
 var async = require('async');
-var moment = require('moment-timezone');
 var client = new Client();
+
+var moment = require('moment-timezone');
 
 var emitter = require("../core-integration-server-v2/javascripts/emitter");
 
@@ -31,15 +32,7 @@ function getDataCount(node) {
 			var arr = pathStartTime.split('/');
 			var formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
 			var startDate = new Date(formattedDateStr);
-			filterDate = toTimeZone(startDate, "YYYY-MM-DDTHH:mm:ssZ", "EDT");
-			var instanceTime = node.connection.instanceStartTime;
-			arr = instanceTime.split('/');
-			formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
-			var thirtyMinutesBefore = new Date(formattedDateStr);
-			thirtyMinutesBefore.setMinutes(thirtyMinutesBefore.getMinutes() - 30);
-			if(thirtyMinutesBefore.getTime() > startDate.getTime()) {
-				filterDate = toTimeZone(thirtyMinutesBefore, "YYYY-MM-DDTHH:mm:ssZ", "EDT");
-			}  
+			filterDate = toTimeZone(startDate, "YYYY-MM-DDTHH:mm:ssZ", "EST");			
 		}
 		if(filterDate != null) {
 			newUrl += "?created_at_min=" + filterDate;
@@ -85,19 +78,19 @@ function getStoreData(url, args, type, node) {
 				if( status == 2) {
 					if(type == "customer") {
 						if(data.customers.length == 0 ) {
-							emitter.emit("error", 'No data found in Shopify',"",url,node);
+							emitter.emit("error", 'No customers found in Shopify',"",url,node);
 							return;
 						}
 						formCustomer(data.customers,node);
 					} else if (type == "product") {
 						if(data.products.length == 0 ) {
-							emitter.emit("error", 'No data found in Shopify',"",url,node);
+							emitter.emit("error", 'No products found in Shopify',"",url,node);
 							return;
 						}
 						formProduct(data.products,node);
 					} else {
 						if(data.orders.length == 0 ) {
-							emitter.emit("error", 'No data found in Shopify',"",url,node);
+							emitter.emit("error", 'No orders found in Shopify',"",url,node);
 							return;
 						}
 						formOrder(data.orders,node)
@@ -110,7 +103,7 @@ function getStoreData(url, args, type, node) {
 				emitter.emit('error', e.message, e.stack, "", node);
 			}
 		}).on('error',function(err){
-			emitter.emit("error", errMsg, err, url, node);
+			emitter.emit("error", errMsg, "", url, node);
 		});
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
@@ -119,6 +112,10 @@ function getStoreData(url, args, type, node) {
 
 function b64EncodeUnicode(str) {
 	return new Buffer(str).toString('base64');
+}
+
+function toTimeZone(time, format, zone) {
+	return moment(time).tz(zone).format(format);
 }
 
 function formCustomer(dataArr, node) {
@@ -387,7 +384,7 @@ function createCustomer(url, node, callback) {
 					emitter.emit('error', e.message, e.stack, url, node);
 				}
 			}).on('error', function(err) {
-				emitter.emit('error', errMsg, err, url, node);
+				emitter.emit('error', errMsg, "", url, node);
 			});
 		}, 5000);
 	} catch(e) {
@@ -424,7 +421,6 @@ function updateCustomer(url, node) {
 		}
 		getCustomerId(url, node, function(customerId, addressId) {		
 			var newUrl = url + 'customers/' + customerId + '/addresses/' + addressId +'.json';
-			console.log(newUrl);
 			var postData = {				
 				address : {
 					id : addressId,
@@ -466,7 +462,7 @@ function updateCustomer(url, node) {
 						emitter.emit('error',e.message, e.stack, newUrl, node);
 					}
 				}).on('error', function(err) {
-					emitter.emit('error', errMsg, err, newUrl, node);
+					emitter.emit('error', errMsg, "", newUrl, node);
 				});
 			}, 5000);
 		});		
@@ -505,7 +501,7 @@ function getCustomerId(url, node, callback) {
 					emitter.emit('error', e.message, e.stack,newUrl, node);
 				}
 			}).on('error', function(err) {
-				emitter.emit('error', errMsg, err, newUrl, node);
+				emitter.emit('error', errMsg, "", newUrl, node);
 			});
 		}, 5000);
 	} catch(e) {
@@ -557,16 +553,12 @@ function getProductId(url, node, tag, callback) {
 					emitter.emit('error', e.message, e.stack,newUrl, node);
 				}
 			}).on('error', function(err) {
-				emitter.emit('error', errMsg, err, newUrl, node);
+				emitter.emit('error', errMsg, "", newUrl, node);
 			});
 		}, 5000);
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack,"", node);
 	}
-}
-
-function toTimeZone(time, format, zone) {
-    return moment(time).tz(zone).format(format);
 }
 
 function updateProduct(url, obj, node, tag, callback) {
@@ -614,7 +606,7 @@ function updateProduct(url, obj, node, tag, callback) {
 					emitter.emit('error',e.message, e.stack, newUrl, node);
 				}
 			}).on('error', function(err) {
-				emitter.emit('error', errMsg, err, newUrl, node);
+				emitter.emit('error', errMsg, "", newUrl, node);
 			});
 		}, 5000);
 	} catch(e) {
@@ -671,7 +663,7 @@ function createProduct(url, obj, node, callback) {
 					emitter.emit('error',e.message, e.stack, url, node);
 				}
 			}).on('error', function(err) {
-				emitter.emit('error', errMsg, err, url, node);
+				emitter.emit('error', errMsg, "", url, node);
 			});
 		}, 5000);
 	} catch(e) {
@@ -772,7 +764,7 @@ function createOrder(url, node) {
 					emitter.emit('error', e.message, e.stack, "", node);
 				}
 			}).on('error', function(err) {
-				emitter.emit('error', errMsg, err, newUrl, node);
+				emitter.emit('error', errMsg, "", newUrl, node);
 			});
 		}, 5000);
 	} catch(e) {
