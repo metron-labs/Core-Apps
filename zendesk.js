@@ -4,7 +4,7 @@ var client = new Client();
 
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
-var apiToken, agentMailId, subDomain, ticketSubject, ticketComment;
+var apiToken, agentMailId, subDomain, ticketSubject, ticketComment, actionName;
 var errMsg = 'Error in connecting  Zendesk';
 
 function run(node) {
@@ -27,6 +27,7 @@ function run(node) {
 
 function getStoreData(url, type, node) {
 	try {
+		actionName = node.connection.actionName.toLowerCase();
 		if(type == 'ticket') {
 			url += 'tickets.json';
 		} else {
@@ -52,7 +53,11 @@ function getStoreData(url, type, node) {
 						getStoreData(nextPage, type, node);
 					}				
 				} else {
-					emitter.emit('error', data.error, args.data,url, node);		
+					if(status == 5) {
+						emitter.emit('error', 'Server Error in Zendesk', '', url, node);
+					} else {
+						emitter.emit('error', data.error, data, url, node);
+					}
 				}
 			} catch(e) {
 				emitter.emit('error', e.message, e.stack, url, node);
@@ -75,8 +80,16 @@ function formCustomer(dataArr, node) {
 			resObj.id = obj.id;
 			resObj.firstName = obj.name;
 			resObj.email = obj.email;
-			resObj.createdAt = obj.creadted_at;
+			resObj.createdAt = obj.created_at;
 			resObj.updatedAt = obj.updated_at;
+			resObj.isLast = false;
+			if(i == dataArr.length-1) {
+				resObj.isLast = true;
+			}
+			resObj.slackFlag = false;
+			if(actionName == 'slack' && i == 0) {
+				resObj.slackFlag = true;
+			}
 			resArr[i] = resObj;
 		}
 		post(resArr, node, '');
@@ -94,7 +107,15 @@ function formCustomerFromTicket(dataArr, node) {
 			obj = dataArr[i];
 			resObj.id = obj.requester_id;
 			resObj.errMessage = obj.description;
-			resObj.errSubject = obj.subject;	
+			resObj.errSubject = obj.subject;
+			resObj.isLast = false;
+			if(i == dataArr.length-1) {
+				resObj.isLast = true;
+			}
+			resObj.slackFlag = false;
+			if(actionName == 'slack' && i == 0) {
+				resObj.slackFlag = true;
+			}
 			resArr[i] = resObj;		
 		}
 		getUserDetails(resArr, node);
@@ -121,13 +142,17 @@ function getUserDetails(dataArr, node) {
 					if(status == 2) {
 						obj.firstName = data.name;
 						obj.email = data.email;
-						obj.createdAt = data.creadted_at;
+						obj.createdAt = data.created_at;
 						obj.updatedAt = data.updated_at;
 						if(length == 0) {
 							post(dataArr, node, '');
 						}
 					} else {
-						emitter.emit('error', data.error, '', node);
+						if(status == 5) {
+							emitter.emit('error', 'Server Error in Zendesk', '', url, node);
+						} else {
+							emitter.emit('error', data.error, data, url, node);
+						}
 					}
 				} catch(e) {
 					emitter.emit('error', e.message, e.stack, url, node);
@@ -178,13 +203,17 @@ function getId(url, type, node, callback) {
 						callback(id);
 					}
 				} else {
-					if(data.hasOwnProperty('description')) {
-						errMsg = data.description;
+					if(status == 5) {
+						emitter.emit('error', 'Server Error in Zendesk', '', newUrl, node);
+					} else {						
+						if(data.hasOwnProperty('description')) {
+							errMsg = data.description;
+						}
+						if(data.hasOwnProperty('error')){
+							errMsg = data.error;
+						}
+						emitter.emit('error', errMsg, '', newUrl, node);
 					}
-					if(data.hasOwnProperty('error')){
-						errMsg = data.error;
-					}
-					emitter.emit('error', errMsg, '', newUrl, node);
 				}
 			} catch(e) {
 				emitter.emit('error', e.message, e.stack, '', node);
@@ -248,31 +277,35 @@ function updateStoreData(url, type, node) {
 					if(status == 2) {
 						post(data, node, msg);
 					} else {
-						if(data.hasOwnProperty('error')) {
-							errMsg = data.error;
-						}
-						if(data.hasOwnProperty('details')) {
-							var details = data.details;
-							if(details.hasOwnProperty('email')) {
-								if(details.email[0].hasOwnProperty('description')) {
-									errMsg = details.email[0].description;
+						if(status == 5) {
+							emitter.emit('error', 'Server Error in Zendesk', '', url, node);
+						} else {
+							if(data.hasOwnProperty('error')) {
+								errMsg = data.error;
+							}
+							if(data.hasOwnProperty('details')) {
+								var details = data.details;
+								if(details.hasOwnProperty('email')) {
+									if(details.email[0].hasOwnProperty('description')) {
+										errMsg = details.email[0].description;
+									}
 								}
 							}
-						}
-						if(data.hasOwnProperty('base')) {
-							var base = data.base;
-							errMsg += ',';
-							for(var j = 0; j < base.length; j++) {
-								errMsg += ' ' + base[j].description;
+							if(data.hasOwnProperty('base')) {
+								var base = data.base;
+								errMsg += ',';
+								for(var j = 0; j < base.length; j++) {
+									errMsg += ' ' + base[j].description;
+								}
 							}
+							emitter.emit('error', errMsg, data,url, node);
 						}
-						emitter.emit('error', errMsg, args.data,url, node);
 					}
 				} catch(e) {
 					emitter.emit('error', e.message, e.stack, url, node);
 				}
 			}).on('error', function(err) {
-				emitter.emit('error', errMsg, args.data, url, node);
+				emitter.emit('error', errMsg, '', url, node);
 			});
 		});		
 	} catch(e) {
@@ -322,7 +355,7 @@ function postTicketOrUser(url, type, option, node) {
 				Authorization : 'Basic ' + b64EncodeUnicode(agentMailId + '/token:' + apiToken),
 				Accept : 'application/json',
 				'Content-Type' : 'application/json'
-			 }
+			}
 		};
 		client.post(url, args, function(data, res) {
 			try {
@@ -330,31 +363,35 @@ function postTicketOrUser(url, type, option, node) {
 				if(status == 2) {
 					post(data, node, msg);
 				} else {
-					if(data.hasOwnProperty('error')) {
-						errMsg = data.error;
-					}
-					if(data.hasOwnProperty('details')) {
-						var details = data.details;
-						if(details.hasOwnProperty('email')) {
-							if(details.email[0].hasOwnProperty('description')) {
-								errMsg = details.email[0].description;
+					if(status == 5) {
+						emitter.emit('error', 'Server Error in Zendesk', '', url, node);
+					} else {
+						if(data.hasOwnProperty('error')) {
+							errMsg = data.error;
+						}
+						if(data.hasOwnProperty('details')) {
+							var details = data.details;
+							if(details.hasOwnProperty('email')) {
+								if(details.email[0].hasOwnProperty('description')) {
+									errMsg = details.email[0].description;
+								}
 							}
 						}
-					}
-					if(data.hasOwnProperty('base')) {
-						var base = data.base;
-						errMsg += ',';
-						for(var j = 0; j < base.length; j++) {
-							errMsg += ' ' + base[j].description;
+						if(data.hasOwnProperty('base')) {
+							var base = data.base;
+							errMsg += ',';
+							for(var j = 0; j < base.length; j++) {
+								errMsg += ' ' + base[j].description;
+							}
 						}
+						emitter.emit('error', errMsg, data, url, node);
 					}
-					emitter.emit('error', errMsg, args.data,url, node);
 				}
 			} catch(e) {
 				emitter.emit('error', e.message, e.stack, url, node);
 			}
 		}).on('error', function(err) {
-			emitter.emit('error', errMsg, args.data, url, node);
+			emitter.emit('error', errMsg, '', url, node);
 		});
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, '', node);
@@ -377,7 +414,7 @@ function testApp(callback) {
 			headers :{ 
 				Authorization : 'Basic ' + b64EncodeUnicode(agentMailId + '/token:' + apiToken),
 				Accept : 'application/json'
-			 }
+			}
 		};
 		client.get(url, args, function(data, res) {
 			try {

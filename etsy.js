@@ -30,6 +30,12 @@ function getCountries(oauth, node, dataArr) {
         oauth.get(url, token, tokenSecret, function(err, data, res) {
             try {
                 if(err) {
+                    if(err.hasOwnProperty('statusCode')) {
+                        var status = parseInt(err.statusCode/100);
+                        if(status == 5) {
+                            emitter.emit('error', 'Server Error in Etsy', "", url, node);
+                        } 
+                    }
                     if(err.hasOwnProperty('data')) {
                         errMsg = err.data;
                     }
@@ -79,11 +85,16 @@ function getStoreData(oauth, node) {
         oauth.get(url, token, tokenSecret, function(err, data, res) {
             try {
                 if(err){
-                    errMsg = err;
+                    if(err.hasOwnProperty('statusCode')) {
+                        var status = parseInt(err.statusCode/100);
+                        if(status == 5) {
+                            emitter.emit('error', 'Server Error in Etsy', "", url, node);
+                        } 
+                    }
                     if(err.hasOwnProperty('data')) {
                         errMsg = err.data;
-                    }
-                    emitter.emit("error", errMsg, "", url, node);
+                    }                  
+                    emitter.emit('error', errMsg, "", url, node);
                 } else {
                     var result = JSON.parse(data);
                     if(result.results.length == 0 && page == 1) {
@@ -164,7 +175,7 @@ function formOrder(dataArr, oauth, node) {
 function getItems(dataArr, oauth, node) {
     try {
         var length = dataArr.length;
-        var items = [];  
+        var items = [];   
         dataArr.forEach(function(obj) {
             var url = baseUrl +  'receipts/' + obj.name + '/transactions';
             setTimeout(function() {
@@ -172,16 +183,21 @@ function getItems(dataArr, oauth, node) {
                     try {
                         if(err) {
                             length--;
-                            if(err.hasOwnProperty("data")) {
-                                emitter.emit("error", err.data, err, url, node);
-                            } else {
-                                emitter.emit("error", err, err, url, node);
+                           if(err.hasOwnProperty('statusCode')) {
+                                var status = parseInt(err.statusCode/100);
+                                if(status == 5) {
+                                    emitter.emit('error', 'Server Error in Etsy', "", url, node);
+                                } 
                             }
+                            if(err.hasOwnProperty('data')) {
+                                errMsg = err.data;
+                            }                  
+                            emitter.emit('error', errMsg, "", url, node);
                         } else {                  
                             var quantity = 0;                      
                             var response = JSON.parse(data);
                             var itemArr = response.results;
-                            var itemObj, item;              
+                            var itemObj, item;               
                             for(var i = 0; i < itemArr.length; i++) {
                                 itemObj = itemArr[i];
                                 item = {};
@@ -195,7 +211,7 @@ function getItems(dataArr, oauth, node) {
                             obj.items = items;
                             obj.name = obj.id;
                             obj.quantity = quantity;
-                            length--;                       
+                            length--;                        
                         }
                         if(length == 0) {
                             post(dataArr, node, "");

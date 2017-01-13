@@ -6,7 +6,8 @@ var client = new Client();
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var shippoToken, fromName, fromPhone, fromCompany, fromStreet, fromCity,
- fromState, fromCountryCode, fromZip, parcelLength, parcelWidth, parcelHeight, parcelWeight;
+  fromState, fromCountryCode, fromZip, parcelLength, parcelWidth,
+  parcelHeight, parcelWeight, actionName;
 
  var netQuantity = 0;
 var arrayLength = 0;
@@ -17,6 +18,7 @@ function run(node) {
 	try {
 		var type = node.option.toLowerCase();
 		var nodeType = node.connector.type;
+		actionName = node.connection.actionName.toLowerCase();
 		var url = "https://api.goshippo.com/v1/";	
 		var args = {
 			headers: { Authorization: "ShippoToken " + shippoToken }
@@ -31,8 +33,7 @@ function run(node) {
 		} else {
 			createOrder(url, type, node);
 		}	
-	} 
-	catch(e) {
+	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }
@@ -57,16 +58,19 @@ function getStoreData(url, args, type, node) {
 					getStoreData(newUrl,args,type,node);
 				}	
 			} else {
-				if(data.hasOwnProperty("detail")) {
-					errMsg = data.detail;
+				if(status == 5) {
+					emitter.emit('error', 'Server Error in Shippo', '', url, node);
+				} else {
+					if(data.hasOwnProperty("detail")) {
+						errMsg = data.detail;
+					}
+					emitter.emit('error', errMsg, "", url, node);
 				}
-				emitter.emit('error', errMsg, "", url, node);
 			}	
 		}).on('error', function(err){
-			emitter.emit("error", errMsg, err, url, node);
+			emitter.emit('error', errMsg, '', url, node);
 		});
-	} 
-	catch(e) {
+	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
 
@@ -130,6 +134,13 @@ function formOrder(dataArr, args, node){
 			resObj.shippingAmount = '';
 			resObj.updatedAt = '';
 			resObj.rateId = '';
+			if(actionName == 'slack' && i == 0) {
+				resObj.slackFlag = true;
+			}
+			resObj.isLast = false;
+			if(i == dataArr.length-1) {
+				resObj.isLast = true;
+			}
 			if(obj.hasOwnProperty("transactions") && obj.transactions.length != 0){
 				var transObj;
 				transObj = obj.transactions[0];
@@ -138,8 +149,7 @@ function formOrder(dataArr, args, node){
 			resArr[i] = resObj;	
 		} 
 		getOrderTransactions(resArr, args, node);
-	} 
-	catch(e) {
+	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
@@ -163,24 +173,27 @@ function getOrderTransactions(resArr, args, node) {
 						resObj.updatedAt = data.object_updated;
 						var rateId = data.rate;
 						resObj.rateId = rateId;
-						length--;
+						length--;	
 						if(length == 0) {
 							getOrderRates(resArr, args, node);
-						}	
+						}						
 					} else {
-						if(data.hasOwnProperty("detail")) {
-							errMsg = data.detail;
+						if(status == 5) {
+							emitter.emit('error', 'Server Error in Shippo', '', transUrl, node);
+						} else {					
+							if(data.hasOwnProperty("detail")) {
+								errMsg = data.detail;
+							}
+							emitter.emit('error', errMsg, "", transUrl, node);
 						}
-						emitter.emit('error', errMsg, "", transUrl, node);
 					}																
 				}).on('error', function(err){
-					emitter.emit("error",errMsg, "", transUrl, node);
+					emitter.emit('error',errMsg, "", transUrl, node);
 				});
 		}}, function(error) {
-			emitter.emit("error",errMsg, error, "", node);
+			emitter.emit('error',errMsg, '', transUrl, node);
 		});
-	} 
-	catch(e) {
+	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}			
 }
@@ -208,19 +221,22 @@ function getOrderRates(resArr, args, node) {
 							post(resArr, node, "");
 						}
 					} else {
-						if(data.hasOwnProperty("detail")) {
-							errMsg = data.detail;
+						if(status == 5) {
+							emitter.emit('error', 'Server Error in Shippo', '', rateUrl, node);
+						} else {
+							if(data.hasOwnProperty("detail")) {
+								errMsg = data.detail;
+							}
+							emitter.emit('error',errMsg, "", rateUrl, node);
 						}
-						emitter.emit('error',errMsg, "", rateUrl, node);
 					}					
 				}).on('error', function(err) {
-					emitter.emit("error",errMsg, "", rateUrl, node);
+					emitter.emit('error',errMsg, "", rateUrl, node);
 				});
 		}}, function(error){
-			emitter.emit("error",errMsg, error, "", node);
+			emitter.emit('error',errMsg, '', rateUrl, node);
 		});
-	} 
-	catch(e) {
+	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }
@@ -266,11 +282,17 @@ function formTransaction(dataArr, args,node) {
 			resObj.createdAt = obj.object_created;
 			resObj.updatedAt = obj.object_updated;
 			resObj.rateId = obj.rate;
+			if(actionName == 'slack' && i == 0) {
+				resObj.slackFlag = true;
+			}
+			resObj.isLast = false;
+			if(i == dataArr.length-1) {
+				resObj.isLast = true;
+			}
 			resArr[i] = resObj;
 		}
 		getTransactionsRate(resArr, args, node);
-	} 
-	catch(e) {
+	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }
@@ -296,19 +318,22 @@ function getTransactionsRate(resArr, args, node) {
 							getShipment(resArr, args, node);
 						}
 					} else {
-						if(data.hasOwnProperty("detail")) {
-							errMsg = data.detail;
+						if(status == 5) {
+							emitter.emit('error','Server Error in Shippo', '', newUrl, node);
+						} else {
+							if(data.hasOwnProperty("detail")) {
+								errMsg = data.detail;
+							}
+							emitter.emit('error',errMsg,"",rateUrl, node);
 						}
-						emitter.emit('error',errMsg,"",rateUrl, node);
 					}
 				}).on('error', function(err) {
-					emitter.emit("error",errMsg,"", rateUrl, node);
+					emitter.emit('error',errMsg, "", rateUrl, node);
 				});
 		}}, function(error){
-			emitter.emit("error", errMsg, error, "", node);
+			emitter.emit('error', errMsg, '', rateUrl, node);
 		});
-	} 
-	catch(e) {
+	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}	
 }
@@ -340,19 +365,22 @@ function getShipment(resArr, args, node) {
 							getAddress(resArr, args, node);
 						}
 					} else {
-						if(data.hasOwnProperty("detail")) {
-							errMsg = data.detail;
+						if(status == 5) {
+							emitter.emit('error','Server Error in Shippo', '', newUrl, node);
+						} else {
+							if(data.hasOwnProperty("detail")) {
+								errMsg = data.detail;
+							}
+							emitter.emit('error',errMsg, "",shipmentUrl, node);
 						}
-						emitter.emit('error',errMsg, "",shipmentUrl, node);
 					}				
 				}).on('error', function(err) {
-					emitter.emit("error",errMsg, "",shipmentUrl, node);
+					emitter.emit('error',errMsg, "",shipmentUrl, node);
 				});
 		}}, function(error){
-			emitter.emit("error", errMsg, error, "", node);
+			emitter.emit('error', errMsg, '', shipmentUrl, node);
 		});
-	} 
-	catch(e) {
+	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}	
 }
@@ -392,20 +420,23 @@ function getAddress(resArr, args, node) {
 							getCustomDeclarations(resArr, args, node);
 						}	
 					} else {
-						if(data.hasOwnProperty("detail")) {
-							errMsg = data.detail;
+						if(status == 5) {
+							emitter.emit('error','Server Error in Shippo', '', newUrl, node);
+						} else {
+							if(data.hasOwnProperty("detail")) {
+								errMsg = data.detail;
+							}
+							emitter.emit('error',errMsg, "", addressUrl, node);
 						}
-						emitter.emit('error',errMsg, "", addressUrl, node);
 					}
 				}).on('error', function(err) {
-					emitter.emit("error",errMsg, "", addressUrl, node);
+					emitter.emit('error',errMsg, "", addressUrl, node);
 				});
 			}
 		}, function(error){
-			emitter.emit("error", errMsg, error, "", node);
+			emitter.emit('error', errMsg, '', addressUrl, node);
 		});
-	} 
-	catch(e) {
+	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
@@ -477,28 +508,47 @@ function getCustomDeclarations(resArr, args, node) {
 									emitter.emit('error',errMsg, "", itemUrl, node);
 								}							
 							}).on('error', function(err) {
-								emitter.emit("error",errMsg, "", itemUrl, node);
+								emitter.emit('error',errMsg, "", itemUrl, node);
 							});
 						}, function(error){
-							emitter.emit("error",error, "", "", node);
+							emitter.emit('error',error, "", itemUrl, node);
 						});
 					} else {
-						if(data.hasOwnProperty("detail")) {
-							errMsg = data.detail;
+						if(status == 5) {
+							emitter.emit('error','Server Error in Shippo', '', newUrl, node);
+						} else {
+							if(data.hasOwnProperty("detail")) {
+								errMsg = data.detail;
+							}
+							emitter.emit('error',errMsg, "", declUrl, node);
 						}
-						emitter.emit('error',errMsg, "", declUrl, node);
 					}	
 				}).on('error', function(err) {
-					emitter.emit("error",errMsg, err, declUrl, node);
+					emitter.emit('error',errMsg, '', declUrl, node);
 				});
 			}				
 		}, function(error){
-			emitter.emit("error", errMsg, error, "", node);
+			emitter.emit('error', errMsg, '', declUrl, node);
 		});
-	} 
-	catch(e) {
+	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}
+}
+
+String.prototype.findCode = function (s) {
+	var str = this.toLowerCase(), n = -1;
+	s = s.toLowerCase();
+	if (!~(n = str.indexOf(s)))
+	 	return false;
+	return true;
+};
+
+function getUSProvinceCode(usstate) {
+	for(key in usStates) {
+		if(key.findCode(usstate)) {
+			return usStates[key];
+		}
+	}	
 }
 
 function createOrder(url, type, node) {
@@ -506,8 +556,11 @@ function createOrder(url, type, node) {
 		var newUrl = url + "orders";
 		var items = [];	
 		var obj = node.reqData;
-		var itemObj, item, postData, country;
-		for(var j = 0; j < obj.items.length; j++) {
+		var itemObj, item, postData, country, state,length = 0;
+		if(obj.hasOwnProperty(items)) {
+			length = obj.items.length;
+		}
+		for(var j = 0; j < length; j++) {
 			var currency = "USPS";
 			item = {};
 			itemObj = obj.items[j];
@@ -521,7 +574,7 @@ function createOrder(url, type, node) {
 			}
 			item.currency = currency;
 			items[j] = item;
-		}
+		}		
 		country = obj.shippingAddress.country;
 		if(country.length > 3) {
 			if(country.toLowerCase() == "united states") {
@@ -529,6 +582,11 @@ function createOrder(url, type, node) {
 			} else {
 				country = country.substring(0,2).toUpperCase();
 			}			
+		}
+		if(country == 'US') {
+			state = getUSProvinceCode(obj.shippingAddress.state);
+		} else {
+			state = obj.shippingAddress.state.substring(0,2).toUpperCase();
 		}
 		postData = {
 			order_number : obj.id,
@@ -553,7 +611,7 @@ function createOrder(url, type, node) {
 				company : obj.shippingAddress.company,
 				street1 : obj.shippingAddress.street,
 				city : obj.shippingAddress.city,
-				state : obj.shippingAddress.state,
+				state : state,
 				country : country,
 				zip : obj.shippingAddress.zip,
 				phone : obj.shippingAddress.phone,
@@ -582,26 +640,29 @@ function createOrder(url, type, node) {
 					postCustomItem(url, data,node);
 				}
 			} else {
-				if(data.hasOwnProperty("detail")) {
-					errMsg = data.detail;
-				} else if (data.hasOwnProperty("messages") && data.messages.length > 0) {
-					errMsg = data.messages[0].text;
-				} else if(data.hasOwnProperty('address_from')) {
-					errMsg = data.address_from[0].__all__[0] + ' in from address';
-				} else if(data.hasOwnProperty('to_address')) {
-					errMsg = data.to_address[0].__all__[0] + ' in to address';
-				} else if(data.hasOwnProperty('items')) {
-					errMsg = data.items[0].__all__[0];
-				} else if(data.hasOwnProperty('__all__')) {
-					errMsg = data.__all__[0];
+				if(status == 5) {
+					emitter.emit('error','Server Error in Shippo', '', newUrl, node);
+				} else {
+					if(data.hasOwnProperty("detail")) {
+						errMsg = data.detail;
+					} else if (data.hasOwnProperty("messages") && data.messages.length > 0) {
+						errMsg = data.messages[0].text;
+					} else if(data.hasOwnProperty('address_from')) {
+						errMsg = data.address_from[0].__all__[0] + ' in from address';
+					} else if(data.hasOwnProperty('to_address')) {
+						errMsg = data.to_address[0].__all__[0] + ' in to address';
+					} else if(data.hasOwnProperty('items')) {
+						errMsg = data.items[0].__all__[0];
+					} else if(data.hasOwnProperty('__all__')) {
+						errMsg = data.__all__[0];
+					}				
+					emitter.emit('error',errMsg, args.data, newUrl, node);
 				}
-				emitter.emit('error',errMsg, args.data, newUrl, node);
 			}
 		}).on('error', function(err) {
-			emitter.emit("error", errMsg, err, newUrl, node)
+			emitter.emit('error', errMsg, args.data, newUrl, node)
 		});
-	} 
-	catch(e) {
+	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
@@ -638,23 +699,26 @@ function postCustomItem(url, orderObj, node) {
 						postCustomDeclarations(url,orderObj, node);
 					}					
 				} else {
-					if(data.hasOwnProperty("detail")) {
-						errMsg = data.detail;
-					} else if (data.hasOwnProperty("messages") && data.messages.length > 0) {
-						errMsg = data.messages[0].text;
-					} else if(data.hasOwnProperty(__all__)) {
-						errMsg = data.__all__[0];
+					if(status == 5) {
+						emitter.emit('error','Server Error in Shippo', '', newUrl, node);
+					} else {
+						if(data.hasOwnProperty("detail")) {
+							errMsg = data.detail;
+						} else if (data.hasOwnProperty("messages") && data.messages.length > 0) {
+							errMsg = data.messages[0].text;
+						} else if(data.hasOwnProperty(__all__)) {
+							errMsg = data.__all__[0];
+						}					
+						emitter.emit('error',errMsg, newUrl, args.data, node);
 					}
-					emitter.emit('error',errMsg, newUrl, args.data, node);
 				}
 			}).on('error', function(err) {
-				emitter.emit("error",errMsg, err, newUrl, node);
+				emitter.emit('error',errMsg, args.data, newUrl, node);
 			});
 		}, function(error) {
-			emitter.emit("error",errMsg, error, "", node);
+			emitter.emit('error',errMsg, args.data, newUrl, node);
 		});
-	} 
-	catch(e) {
+	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}				
 }
@@ -692,20 +756,23 @@ function postCustomDeclarations(url, orderObj, node) {
 				orderObj.customDeclId = data.object_id;
 				postShipment(url,orderObj, null, "order",node);
 			} else {
-				if(data.hasOwnProperty("detail")) {
-					errMsg = data.detail;
-				} else if (data.hasOwnProperty("messages") && data.messages.length > 0) {
-					errMsg = data.messages[0].text;
-				} else if(data.hasOwnProperty(__all__)) {
-					errMsg = data.__all__[0];
+				if(status == 5) {
+					emitter.emit('error','Server Error in Shippo', '', newUrl, node);
+				} else {
+					if(data.hasOwnProperty("detail")) {
+						errMsg = data.detail;
+					} else if (data.hasOwnProperty("messages") && data.messages.length > 0) {
+						errMsg = data.messages[0].text;
+					} else if(data.hasOwnProperty(__all__)) {
+						errMsg = data.__all__[0];
+					}				
+					emitter.emit('error', errMsg,args.data, newUrl, node);
 				}
-				emitter.emit('error', errMsg,args.data, newUrl, node);
 			}
 		}).on('error', function(err) {
-			emitter.emit("error", errMsg, err, newUrl, node);
+			emitter.emit('error', errMsg, args.data, newUrl, node);
 		});	
-	} 
-	catch(e) {
+	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }
@@ -774,26 +841,29 @@ function postShipment(url, orderObj, transObj, tag, node) {
 			if(status == 2) {
 				postTransaction(url, orderObj, data, tag, node);				
 			} else {
-				if(data.hasOwnProperty("detail")) {
-					errMsg = data.detail;
-				} else if (data.hasOwnProperty("messages") && data.messages.length > 0) {
-					errMsg = data.messages[0].text;
-				} else if(data.hasOwnProperty('address_from')) {
-					errMsg = data.address_from[0].__all__[0] + ' in from address';
-				} else if(data.hasOwnProperty('address_to')) {
-					errMsg = data.address_to[0].__all__[0] + ' in to address';
-				} else if(data.hasOwnProperty('parcel')) {
-					errMsg = data.parcel[0].__all__[0];
-				} else if(data.hasOwnProperty('__all__')) {
-					errMsg = data.__all__[0];
+				if(status == 5) {
+					emitter.emit('error','Server Error in Shippo', '', newUrl, node);
+				} else {
+					if(data.hasOwnProperty("detail")) {
+						errMsg = data.detail;
+					} else if (data.hasOwnProperty("messages") && data.messages.length > 0) {
+						errMsg = data.messages[0].text;
+					} else if(data.hasOwnProperty('address_from')) {
+						errMsg = data.address_from[0].__all__[0] + ' in from address';
+					} else if(data.hasOwnProperty('address_to')) {
+						errMsg = data.address_to[0].__all__[0] + ' in to address';
+					} else if(data.hasOwnProperty('parcel')) {
+						errMsg = data.parcel[0].__all__[0];
+					} else if(data.hasOwnProperty('__all__')) {
+						errMsg = data.__all__[0];
+					}					
+					emitter.emit('error',errMsg, args.data, newUrl, node);
 				}
-				emitter.emit('error',errMsg, args.data, newUrl, node);
 			}
 		}).on('error', function(err) {
-			emitter.emit("error",errMsg, err, newUrl, node);
+			emitter.emit("error",errMsg, args.data, newUrl, node);
 		});
-	}
-	catch(e) {
+	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }
@@ -851,13 +921,15 @@ function postTransaction(url, orderObj, shipObj, tag, node) {
 				} else {
 					errMsg = 'Required fields are missing (service level token, shipment, carrier account)';
 				}
+				if(status == 5) {
+					emitter.emit('error','Server Error in Shippo', '', newUrl, node);
+				}
 				emitter.emit('error',errMsg, args.data, newUrl, node);
 			}			
 		}).on('error', function(err) {
-			emitter.emit("error",errMsg, err, newUrl, node);
+			emitter.emit('error',errMsg, args.data, newUrl, node);
 		});
-	} 
-	catch(e) {
+	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }
@@ -875,7 +947,7 @@ function findResult(url, orderObj, transObj, tag, node) {
 				var valid = data.object_status;
 				if(valid == 'ERROR') {
 					errMsg = data.messages[0].text;
-					emitter.emit('error', errMsg, "",newUrl, node);
+					emitter.emit('error', errMsg, data, newUrl, node);
 				} else {
 					var msg;
 					if(labelType == "shipping label") {
@@ -889,16 +961,19 @@ function findResult(url, orderObj, transObj, tag, node) {
 					}	
 				}
 			} else {
-				if(data.hasOwnProperty("detail")) {
-					errMsg = data.detail;
-				}
-				emitter.emit('error',errMsg,"", newUrl, node);
+				if(status == 5) {
+					emitter.emit('error','Server Error in Shippo', '', newUrl, node);
+				} else {
+					if(data.hasOwnProperty("detail")) {
+						errMsg = data.detail;
+					}
+					emitter.emit('error', errMsg, data, newUrl, node);
+				}				
 			}
 		}).on('error', function(err) {
-			emitter.emit('error', errMsg, err, newUrl, node);
+			emitter.emit('error', errMsg, '', newUrl, node);
 		});
-	} 
-	catch(e) {
+	} catch(e) {
 		emitter.emit('error',e.message, e.stack,"",node);
 	}
 }
@@ -935,8 +1010,7 @@ function testApp(callback) {
 		}).on('error', function(err) {
 			callback({status:"error", response:err});
 		});
-	} 
-	catch(e) {
+	} catch(e) {
 		callback({status:"error", response:e.stack});
 	}
 }
@@ -946,8 +1020,7 @@ function test(request, callback) {
 		var credentials = request.credentials;
 		shippoToken = credentials.shippoToken;
 		testApp(callback);
-	} 
-	catch(e) {
+	} catch(e) {
 		callback({status:"error", response:e.stack});
 	}
 }
@@ -972,15 +1045,14 @@ function init(node) {
 		parcelWeight = credentials.parcelWeight;
 		if(state.length > 2) {
 			if(fromCountryCode.toUpperCase() == "US") {
-				state = usStates[state.toLowerCase()];
+				state = getUSProvinceCode(state);
 			} else {
 				state = state.substring(0,2).toUpperCase();
 			}
 		}
 		fromState = state;
 		run(node);
-	} 
-	catch(e) {
+	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
 }

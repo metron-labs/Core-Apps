@@ -32,8 +32,12 @@ function getStoreData(type, node) {
 						if(data.ok) {
 							setCoreCustomers(data.members, node);
 						} else {
-							errMsg = data.error;
-							emitter.emit('error', errMsg, data, url, node);
+							if(status == 5) {
+								emitter.emit('error', 'Server Error in Slack', '', url, node);
+							} else {
+								errMsg = data.error;
+								emitter.emit('error', errMsg, data, url, node);
+							}
 						}
 					}					
 				} else {
@@ -60,6 +64,10 @@ function setCoreCustomers(userArr, node) {
 			reqObj.profile = obj.profile;
 			reqObj.lastName = obj.profile.last_name;
 			reqObj.email = obj.profile.email;
+			resObj.isLast = false;
+			if(i == userArr.length-1) {
+				resObj.isLast = true;
+			}
 			reqArr[i] = reqObj;
 		}
 		post(reqArr, node, '');

@@ -43,20 +43,22 @@ function run(node) {
                 if(status == 2) {
                     post(data, node, msg);
                 } else {
-                    
-                    if(data.hasOwnProperty("detail")) {
-                        errMsg = data.detail;
+                    if(status == 5) {
+                         emitter.emit('error', 'Server Error in Twilio','', url, node);
                     } else {
-                        errMsg = data.message;
+                        if(data.hasOwnProperty("detail")) {
+                            errMsg = data.detail;
+                        } else {
+                            errMsg = data.message;
+                        }
+                        emitter.emit('error', errMsg, data, url, node);
                     }
-                    console.log(errMsg);
-                    emitter.emit('error',errMsg,args.data,url,node);
                 }
             } catch(e) {
                 emitter.emit('error', e.message, e.stack, url, node);
             }   
          }).on('error',function(err) {
-           emitter.emit("error",errMsg, args.data, url, node);
+           emitter.emit("error",errMsg, '', url, node);
         });
     } catch(e) {
         emitter.emit('error', e.message, e.stack, "", node);
@@ -91,7 +93,7 @@ function testApp(callback) {
                         response: data
                     };
                 } else {
-                    var errMsg = 'Something went wrong on the request';
+                    var errMsg = 'Error in connecting Twilio';
                     if(data.hasOwnProperty("detail")) {
                         errMsg = data.detail;
                     } else {
@@ -120,7 +122,6 @@ function test(request, callback) {
         accountSid = credentials.accountSid;
         authToken = credentials.authToken;
         fromPhone = credentials.fromPhone;
-        baseUrl = credentials.url;
         testApp(callback);
     } catch(e) {
         callback({status:"error", response:e.stack});
