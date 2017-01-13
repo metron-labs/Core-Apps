@@ -716,7 +716,7 @@ function postCustomItem(url, orderObj, node) {
 				emitter.emit('error',errMsg, args.data, newUrl, node);
 			});
 		}, function(error) {
-			emitter.emit('error',errMsg, args.data, newUrl, node);
+			emitter.emit('error',errMsg, '', newUrl, node);
 		});
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
