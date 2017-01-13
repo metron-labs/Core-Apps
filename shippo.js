@@ -557,10 +557,7 @@ function createOrder(url, type, node) {
 		var items = [];	
 		var obj = node.reqData;
 		var itemObj, item, postData, country, state,length = 0;
-		if(obj.hasOwnProperty(items)) {
-			length = obj.items.length;
-		}
-		for(var j = 0; j < length; j++) {
+		for(var j = 0; j < obj.items.length; j++) {
 			var currency = "USPS";
 			item = {};
 			itemObj = obj.items[j];
