@@ -164,9 +164,12 @@ function formOrder(dataArr, oauth, node) {
             if(page == null) {
                 resObj.isLast = true;
             }
-            resArr[i] = resObj;       
+            resArr[i] = resObj; 
+        if ( i == dataArr.length - 1) {
+			getItems(resArr, oauth, node);       
+		}      
         }
-        getItems(resArr, oauth, node);       
+       // getItems(resArr, oauth, node);       
     } catch(e) {
         emitter.emit('error',e.message, e.stack, "", node);
     }
@@ -175,7 +178,8 @@ function formOrder(dataArr, oauth, node) {
 function getItems(dataArr, oauth, node) {
     try {
         var length = dataArr.length;
-        var items = [];   
+        var items = [];
+var finalResArr = [];
         dataArr.forEach(function(obj) {
             var url = baseUrl +  'receipts/' + obj.name + '/transactions';
             setTimeout(function() {
@@ -196,6 +200,12 @@ function getItems(dataArr, oauth, node) {
                         } else {                  
                             var quantity = 0;                      
                             var response = JSON.parse(data);
+console.log("data......"+data);
+console.log("response %j",response );
+				if(!response.hasOwnProperty("results")){
+length--;
+return;
+}
                             var itemArr = response.results;
                             var itemObj, item;               
                             for(var i = 0; i < itemArr.length; i++) {
@@ -211,10 +221,12 @@ function getItems(dataArr, oauth, node) {
                             obj.items = items;
                             obj.name = obj.id;
                             obj.quantity = quantity;
+				var count = finalResArr.length;
+				finalResArr[count] = obj;
                             length--;                        
                         }
                         if(length == 0) {
-                            post(dataArr, node, "");
+                            post(finalResArr, node, "");
                             if(page != null) {
                                 getStoreData(oauth, node);
                             }

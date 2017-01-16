@@ -536,10 +536,11 @@ function getCustomDeclarations(resArr, args, node) {
 }
 
 String.prototype.findCode = function (s) {
-	var str = this.toLowerCase(), n = -1;
+	var str = this.toLowerCase();
 	s = s.toLowerCase();
-	if (!~(n = str.indexOf(s)))
+	if (str.indexOf(s) == -1) {
 	 	return false;
+}
 	return true;
 };
 
@@ -580,7 +581,9 @@ function createOrder(url, type, node) {
 				country = country.substring(0,2).toUpperCase();
 			}			
 		}
-		if(country == 'US') {
+		if (obj.shippingAddress.state.length == 2) {
+state = obj.shippingAddress.state;
+		}else if(country == 'US') {
 			state = getUSProvinceCode(obj.shippingAddress.state);
 		} else {
 			state = obj.shippingAddress.state.substring(0,2).toUpperCase();

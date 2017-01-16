@@ -2,13 +2,14 @@ var Client = require('node-rest-client').Client;
 var client = new Client();
 
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
-var apiKey, apiPassword, siteName, caseSubject, fromEmail, subject, message;
+var apiKey, apiPassword, siteName, caseSubject, fromEmail, subject, message, actionName;
 var errMsg = 'Error in connecting Desk';
 
 function run(node) {
 	try {
 		var nodeType =  node.connector.type.toLowerCase();
 		var type = node.option.toLowerCase();
+		actionName = node.connection.actionName.toLowerCase();
 		var reqObj = node.reqData;
 		if(nodeType == 'trigger') {
 			getStoreData(type, node);
@@ -46,23 +47,31 @@ function getStoreData(type, node) {
 
 function formCustomer(customerArr, node) {
 	try {
-		var reqarr = [];
-		var obj, reqobj;
+		var resArr = [];
+		var obj, resObj;
 		if(customerArr.length == 0) {
 			emitter.emit('error', 'No data found in desk', '', "", node);
 		}
 		for (var i = 0; i < customerArr.length; i++) {
-			reqobj = {};
+			resObj = {};
 		 	obj = customerArr[i];
-		 	reqobj.id = obj.id;
-		 	reqobj.firstName = obj.first_name;
-		 	reqobj.lastName = obj.last_name;
-		 	reqobj.email = obj.emails[0].value;
-		 	reqobj.createdAt = obj.created_at;
-		 	reqobj.updatedAt = obj.updated_at;
-		 	reqarr[i] = reqobj;
+		 	resObj.id = obj.id;
+		 	resObj.firstName = obj.first_name;
+		 	resObj.lastName = obj.last_name;
+		 	resObj.email = obj.emails[0].value;
+		 	resObj.createdAt = obj.created_at;
+		 	resObj.updatedAt = obj.updated_at;
+		 	resObj.slackFlag = false;
+			if(actionName == 'slack' && i == 0) {
+				resObj.slackFlag = true;
+			}
+			resObj.isLast = false;
+			if(i == customerArr.length-1) {
+				resObj.isLast = true;
+			}
+		 	resArr[i] = resObj;
 		 }
-		 post(reqarr, node, '');
+		 post(resArr, node, '');
 	} catch(e) {
         emitter.emit('error', e.message, e.stack, "", node);
     }
@@ -78,7 +87,6 @@ function postStoreData(type, node) {
 		} else if(type == "case") {
 			url += "cases";
 			postCase(url, node, type);
-
 		} else {
 			url += "customers";
 			postCustomer(url, node, type);

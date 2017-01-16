@@ -6,7 +6,7 @@ var client = new Client();
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var consumerKey, consumerSecret, accessToken, tokenSecret, accountType, companyId, url,
-	incomeAccNo, incomeAccName, expenseAccNo, expenseAccName, assetAccNo, assetAccName;
+	incomeAccNo, incomeAccName, expenseAccNo, expenseAccName, assetAccNo, assetAccName, actionName;
 var errMsg = 'Error in connecting Quickbooks online';
 
 function run(node) {
@@ -15,6 +15,7 @@ function run(node) {
 		var authorizeUrl = "https://appcenter.intuit.com/Connect/Begin";
 		var type = node.option.toLowerCase();
 		var nodeType = node.connector.type;
+		actionName = node.connection.actionName.toLowerCase();
 		if(accountType.toLowerCase() == "sandbox") {
 			url = "https://sandbox-quickbooks.api.intuit.com/v3/company/";
 		} else {
@@ -128,6 +129,14 @@ function formCustomer(dataArr, node) {
 			}
 			addr1.company = company;
 			resObj.defaultAddress = addr1;
+			resObj.slackFlag = false;
+			if(actionName == 'slack' && i == 0) {
+				resObj.slackFlag = true;
+			}
+			resObj.isLast = false;
+			if(i == dataArr.length-1) {
+				resObj.isLast = true;
+			}
 			resArr[i] = resObj;		
 		}
 		post(resArr, node,"");
@@ -162,6 +171,14 @@ function formProduct(dataArr, node) {
 				qtyOnHand = obj.QtyOnHand;
 			}
 			resObj.qtyOnHand = qtyOnHand;
+			resObj.slackFlag = false;
+			if(actionName == 'slack' && i == 0) {
+				resObj.slackFlag = true;
+			}
+			resObj.isLast = false;
+			if(i == dataArr.length-1) {
+				resObj.isLast = true;
+			}
 			resArr[i] = resObj;		
 		}
 		post(resArr, node);
@@ -233,6 +250,14 @@ function formOrder(dataArr, node) {
 				status = "paid";
 			}
 			resObj.status = status;
+			resObj.slackFlag = false;
+			if(actionName == 'slack' && i == 0) {
+				resObj.slackFlag = true;
+			}
+			resObj.isLast = false;
+			if(i == dataArr.length-1) {
+				resObj.isLast = true;
+			}
 			resArr[i] = resObj;
 		}
 		post(resArr, node);

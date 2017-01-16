@@ -79,11 +79,14 @@ function formCustomer(dataArr, node) {
 			addr.country = obj.to.address_country;
 			addr.zip = obj.to.address_zip;
 			resObj.defaultAddress = addr;
-			var slackFlag = false;
+			resObj.isLast = false;
+			resObj.slackFlag = false;
 			if(actionName == 'slack' && i == 0) {
-				slackFlag = true;
+				resObj.slackFlag = true;
+			}
+			if(i == count) {
+				resObj.isLast = true;
 			}			
-			resObj.slackFlag = slackFlag;
 			resArr[i] = resObj;
 		}
 		post(resArr, node, '');
@@ -247,7 +250,7 @@ function init(node) {
 		var credentials = node.credentials;
 		apiKey = credentials.apiKey;
 		var trigger = node.connection.triggerName.toLowerCase();
-		if(trigger != 'handwritng') {
+		if(trigger != 'handwriting') {
 			frontFileUrl = credentials.frontFileUrl;
 		}
 		if(credentials.hasOwnProperty('backFileUrl')) {

@@ -6,13 +6,14 @@ var OAuth = require('oauth').OAuth2;
 
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
-var sfAccessToken, baseUrl, userName,password, clientId, clientSecret, securityToken;
+var sfAccessToken, baseUrl, userName,password, clientId, clientSecret, securityToken, actionName;
 var errMsg = 'Error in connecting SalesForce';
 
 function run(node) {
 	try {
 		var type = node.option.toLowerCase();
 		var nodeType = node.connector.type;
+		actionName = node.connection.actionName.toLowerCase();
 		var url = "https://login.salesforce.com/services/oauth2/token";
 		var postData = "grant_type=password&username=" + encodeURIComponent(userName) 
 			+ "&password=" + password + securityToken + "&client_id="
@@ -161,6 +162,14 @@ function formCustomer(dataArr, type, node) {
 				addr1.zip = obj.MailingPostalCode;
 			}
 			resObj.defaultAddress = addr1;
+			resObj.slackFlag = false;
+			if(actionName == 'slack' && i == 0) {
+				resObj.slackFlag = true;
+			}
+			resObj.isLast = false;
+			if(i == dataArr.length-1) {
+				resObj.isLast = true;
+			}
 			resArr[i] = resObj;
 		}
 		post(resArr, node,"");
@@ -189,6 +198,14 @@ function formCustomerFromAccount(dataArr, node) {
 			addr1.country = obj.BillingCountry;
 			addr1.zip = obj.BillingPostalCode;
 			resObj.defaultAddress = addr1;
+			resObj.slackFlag = false;
+			if(actionName == 'slack' && i == 0) {
+				resObj.slackFlag = true;
+			}
+			resObj.isLast = false;
+			if(i == dataArr.length-1) {
+				resObj.isLast = true;
+			}
 			resArr[i] = resObj;
 		}
 		post(resArr, node,"");
