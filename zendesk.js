@@ -74,6 +74,14 @@ function formCustomer(dataArr, node) {
 	try {
 		var resArr = [];
 		var obj, resObj;
+		var msgPrefix = 'No ';
+		if(node.optionType.toLowerCase() == 'new') {
+			msgPrefix = 'No new ';
+		}
+		if(dataArr.length == 0) {
+			emitter.emit('error', msgPrefix + 'customers found in Zendesk', '', '', node);
+			return;
+		}
 		for(var i = 0; i < dataArr.length; i++) {
 			resObj = {};
 			obj = dataArr[i];
@@ -102,6 +110,14 @@ function formCustomerFromTicket(dataArr, node) {
 	try {
 		var resArr = [];
 		var obj, resObj;
+		var msgPrefix = 'No ';
+		if(node.optionType.toLowerCase() == 'new') {
+			msgPrefix = 'No new ';
+		}
+		if(dataArr.length == 0) {
+			emitter.emit('error', msgPrefix + 'customers found in Zendesk', '', '', node);
+			return;
+		}
 		for(var i = 0; i < dataArr.length; i++) {
 			resObj = {};
 			obj = dataArr[i];

@@ -100,7 +100,7 @@ function getStoreData(oauth, node) {
                 } else {
                     var result = JSON.parse(data);
                     if(result.results.length == 0 && page == 1) {
-                        var msgPrefix = 'No '
+                        var msgPrefix = 'No ';
                         if(node.optionType.toLowerCase() == 'new') {
                             msgPrefix = 'No new ';
                         }
@@ -167,7 +167,7 @@ function formOrder(dataArr, oauth, node) {
             resObj.billingAddress = billAddr;
             resObj.shippingAddress = billAddr;
             resObj.isLast = false;
-            if(page == null && dataArr.length-1) {
+            if(page == null && i == dataArr.length-1) {
                 resObj.isLast = true;
             }
             resArr[i] = resObj; 

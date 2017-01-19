@@ -44,18 +44,26 @@ function getStoreData(type, node) {
 					emitter.emit('error', errMsg, data, url, node);
 				}
 			}  catch(e) {
-        		emitter.emit('error', e.message, e.stack, url, node);
-        	}
+				emitter.emit('error', e.message, e.stack, url, node);
+			}
 		})
 	} catch(e) {
-        emitter.emit('error', e.message, e.stack, "", node);
-    }
+		emitter.emit('error', e.message, e.stack, "", node);
+	}
 }
 
 function setCoreCustomers(userArr, node) {
 	try {
 		var reqArr = [];
 		var obj, reqObj;
+		var msgPrefix = 'No ';
+		if(node.optionType.toLowerCase() == 'new') {
+			msgPrefix = 'No new ';
+		}
+		if(userArr.length == 0) {
+			emitter.emit('error', msgPrefix + 'customers found in Slack', '', '', node);
+			return;
+		}
 		for (var i = 0; i < userArr.length; i++) {
 			reqObj = {};
 			obj = userArr[i];
@@ -72,8 +80,8 @@ function setCoreCustomers(userArr, node) {
 		}
 		post(reqArr, node, '');
 	} catch(e) {
-        emitter.emit('error', e.message, e.stack, "", node);
-    }
+		emitter.emit('error', e.message, e.stack, "", node);
+	}
 }
 
 function post(response, node, message) {
@@ -98,7 +106,7 @@ function postStoreData(type, node) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
- 
+
 function postInvite(node, type) {
 	try {
 		var reqObj = node.reqData;
@@ -202,8 +210,8 @@ function testApp(callback) {
 			callback({status:"error", response:err});
 		});
 	} catch(e) {
-        callback({status:"error", response:e.stack});
-    }
+		callback({status:"error", response:e.stack});
+	}
 }
 
 function test(request, callback) {
