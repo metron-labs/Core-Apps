@@ -31,14 +31,22 @@ function getPostCards(node) {
 			headers :{ 
 				Authorization : 'Basic ' + b64EncodeUnicode(apiKey + ':' + ''),
 				Accept : 'application/json'
-			 }
+			}
 		};
 		client.get(url, args, function(data, res) {
 			try {
 				var status = parseInt(res.statusCode/100);
 				if(status == 2) {
 					count = data.total_count;
-					formCustomer(data.data, node);
+					var msgPrefix = 'No '
+					if(node.optionType.toLowerCase() == 'new') {
+						msgPrefix = 'No new ';
+					}
+					if(count == 0) {
+						emitter.emit('error', msgPrefix + 'postcards found in Lob', '', url, node);
+						return;
+					} 
+					formCustomer(data.data, node);										
 				} else {
 					if(data.hasOwnProperty('error')) {
 						errMsg = data.error.message;
@@ -135,8 +143,8 @@ function createPostCard(node) {
 		} else {
 			var backUrl = 'http://neemtecsolutions.com/corehq/poster_header.png';
 			back = "<html><div style='margin:-8px'><img src='" + backUrl
-				+ "' height='100' width='100%' style='margin:0px'/></div><div style='position:absolute; width:35%;padding:30px; font-size:14px'>"
-				+ escapeHtml(textMessage) + "</div></html>";
+			+ "' height='100' width='100%' style='margin:0px'/></div><div style='position:absolute; width:35%;padding:30px; font-size:14px'>"
+			+ escapeHtml(textMessage) + "</div></html>";
 		}
 		var postData = {			
 			to : {
@@ -191,8 +199,8 @@ function post(response, node, message) {
 
 function escapeHtml(str) {
 	return str.replace(/[\u00A0-\u99999<>\&\?\'\"\#\$\¢\£\€\©\®]/gim, function(i) {
-        return '&#'+i.charCodeAt(0)+';';
-    });
+		return '&#'+i.charCodeAt(0)+';';
+	});
 }
 
 function b64EncodeUnicode(string) {
@@ -206,7 +214,7 @@ function testApp(callback) {
 			headers :{ 
 				Authorization : 'Basic ' + b64EncodeUnicode(apiKey + ':' + ''),
 				Accept : 'application/json'
-			 }
+			}
 		};
 		client.get(url, args, function(data, res) {
 			try {

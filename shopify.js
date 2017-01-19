@@ -74,23 +74,27 @@ function getStoreData(url, args, type, node) {
 		actionName = node.connection.actionName.toLowerCase();
 		client.get(url, args, function (data, res) {
 			try {
-				var status = parseInt(res.statusCode/100);		
+				var status = parseInt(res.statusCode/100);
+				var msgPrefix = 'No ';
+				if(node.optionType.toLowerCase() == 'new') {
+					msgPrefix = 'No new ';
+				}
 				if( status == 2) {
 					if(type == "customer") {
 						if(data.customers.length == 0 ) {
-							emitter.emit("error", 'No customers found in Shopify',"",url,node);
+							emitter.emit("error", msgPrefix + 'customers found in Shopify',"",url,node);
 							return;
 						}
 						formCustomer(data.customers,node);
 					} else if (type == "product") {
 						if(data.products.length == 0 ) {
-							emitter.emit("error", 'No products found in Shopify',"",url,node);
+							emitter.emit("error", msgPrefix + 'products found in Shopify',"",url,node);
 							return;
 						}
 						formProduct(data.products,node);
 					} else {
 						if(data.orders.length == 0 ) {
-							emitter.emit("error", 'No orders found in Shopify',"",url,node);
+							emitter.emit("error", msgPrefix + 'orders found in Shopify',"",url,node);
 							return;
 						}
 						formOrder(data.orders,node)

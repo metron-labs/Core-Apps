@@ -6,10 +6,10 @@ var client = new Client();
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var shippoToken, fromName, fromPhone, fromCompany, fromStreet, fromCity,
-  fromState, fromCountryCode, fromZip, parcelLength, parcelWidth,
-  parcelHeight, parcelWeight, actionName;
+fromState, fromCountryCode, fromZip, parcelLength, parcelWidth,
+parcelHeight, parcelWeight, actionName;
 
- var netQuantity = 0;
+var netQuantity = 0;
 var arrayLength = 0;
 var finalDataArr = [];
 var errMsg = 'Error in connecting Shippo';
@@ -40,10 +40,18 @@ function run(node) {
 
 function getStoreData(url, args, type, node) {
 	try {
-			client.get(url,args,function(data,res) {
+		client.get(url,args,function(data,res) {
 			var status = parseInt(res.statusCode/100);
 			if(status == 2) {
 				var dataLength = data.count;
+				var msgPrefix = 'No ';
+				var type = node.option.toLowerCase();
+				if(node.optionType.toLowerCase() == 'new') {
+					msgPrefix = 'No new ';
+				} 
+				if(dataLength == 0) {
+					emitter.emit('error', msgPrefix + type + 's found in Shippo', '', url, node);
+				}
 				arrayLength += data.results.length;
 				var results = data.results;
 				finalDataArr = finalDataArr.concat(results);
@@ -190,9 +198,9 @@ function getOrderTransactions(resArr, args, node) {
 				}).on('error', function(err){
 					emitter.emit('error',errMsg, "", transUrl, node);
 				});
-		}}, function(error) {
-			emitter.emit('error',errMsg, '', transUrl, node);
-		});
+			}}, function(error) {
+				emitter.emit('error',errMsg, '', transUrl, node);
+			});
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}			
@@ -233,9 +241,9 @@ function getOrderRates(resArr, args, node) {
 				}).on('error', function(err) {
 					emitter.emit('error',errMsg, "", rateUrl, node);
 				});
-		}}, function(error){
-			emitter.emit('error',errMsg, '', rateUrl, node);
-		});
+			}}, function(error){
+				emitter.emit('error',errMsg, '', rateUrl, node);
+			});
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
@@ -264,18 +272,18 @@ function formTransaction(dataArr, args,node) {
 			} else if(errMsg == null || errMsg == ''){
 				if(status.toUpperCase() == "UNKNOWN") {
 					errMsg = "The package has not been found via the carrier's tracking system, "
-								+ "or it has been found but not yet scanned by the carrier";
+					+ "or it has been found but not yet scanned by the carrier";
 				} else if(status.toUpperCase() == "FAILURE") {
 					errMsg = "The carrier indicated that there has been an issue with the delivery."
-							+ " This can happen for various reasons and depends on the carrier. "
-							+ "This status does not indicate a technical, but a delivery issue.";
+					+ " This can happen for various reasons and depends on the carrier. "
+					+ "This status does not indicate a technical, but a delivery issue.";
 				} else if(status.toUpperCase() == "TRANSIT") {
 					errMsg = "The package has been scanned by the carrier and is in transit.";
 				} else if(status.toUpperCase() == "DELIVERED") {
 					errMsg = "The package has been successfully delivered.";
 				} else if(status.toUpperCase() == "RETURNED") {
 					errMsg = "The package is en route to be returned to the sender,"
-									+ " or has been returned successfully.";
+					+ " or has been returned successfully.";
 				}
 			}
 			resObj.errMsg = errSubject + ' ' + errMsg;
@@ -330,9 +338,9 @@ function getTransactionsRate(resArr, args, node) {
 				}).on('error', function(err) {
 					emitter.emit('error',errMsg, "", rateUrl, node);
 				});
-		}}, function(error){
-			emitter.emit('error', errMsg, '', rateUrl, node);
-		});
+			}}, function(error){
+				emitter.emit('error', errMsg, '', rateUrl, node);
+			});
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}	
@@ -353,7 +361,7 @@ function getShipment(resArr, args, node) {
 					var status = parseInt(res.statusCode/100);
 					if(status == 2) {
 						if(data.object_status.toUpperCase() == "ERROR" 
-						 || data.object_state.toUpperCase() == "INVALID" ) {
+							|| data.object_state.toUpperCase() == "INVALID" ) {
 							if(resObj.errMsg == '' && data.messages.length > 0) {
 								resObj.errMsg = data.messages[0].text;
 							}
@@ -377,9 +385,9 @@ function getShipment(resArr, args, node) {
 				}).on('error', function(err) {
 					emitter.emit('error',errMsg, "",shipmentUrl, node);
 				});
-		}}, function(error){
-			emitter.emit('error', errMsg, '', shipmentUrl, node);
-		});
+			}}, function(error){
+				emitter.emit('error', errMsg, '', shipmentUrl, node);
+			});
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}	
@@ -539,8 +547,8 @@ String.prototype.findCode = function (s) {
 	var str = this.toLowerCase();
 	s = s.toLowerCase();
 	if (str.indexOf(s) == -1) {
-	 	return false;
-}
+		return false;
+	}
 	return true;
 };
 
@@ -582,7 +590,7 @@ function createOrder(url, type, node) {
 			}			
 		}
 		if (obj.shippingAddress.state.length == 2) {
-state = obj.shippingAddress.state;
+			state = obj.shippingAddress.state;
 		}else if(country == 'US') {
 			state = getUSProvinceCode(obj.shippingAddress.state);
 		} else {
@@ -743,12 +751,12 @@ function postCustomDeclarations(url, orderObj, node) {
 			items : customIds
 		};
 		var args = {
-				data : postData,
-				headers : { 
-					Authorization : "ShippoToken " + shippoToken, 
-					Accept : "application/json",
-					"Content-Type" : "application/json" 
-				}
+			data : postData,
+			headers : { 
+				Authorization : "ShippoToken " + shippoToken, 
+				Accept : "application/json",
+				"Content-Type" : "application/json" 
+			}
 		};
 		client.post(newUrl,args, function(data, res) {
 			var status = parseInt(res.statusCode/100);
@@ -834,7 +842,7 @@ function postShipment(url, orderObj, transObj, tag, node) {
 		var args = {
 			data : postData,
 			headers : { Authorization : 'ShippoToken ' + shippoToken,
-			 Accept : "application/json", "Content-Type" : "application/json"}
+			Accept : "application/json", "Content-Type" : "application/json"}
 		};
 		client.post(newUrl, args, function(data, res) {
 			var status = parseInt(res.statusCode/100);
@@ -1016,7 +1024,7 @@ function testApp(callback) {
 }
 
 function test(request, callback) {
-    try {
+	try {
 		var credentials = request.credentials;
 		shippoToken = credentials.shippoToken;
 		testApp(callback);
@@ -1026,7 +1034,7 @@ function test(request, callback) {
 }
 
 function init(node) {
-    try {
+	try {
 		var credentials = node.credentials;
 		shippoToken = credentials.shippoToken;
 		fromName = credentials.fromName;
@@ -1058,8 +1066,8 @@ function init(node) {
 }
 
 var Shippo = {
-    init :  init,
-    test : test
+	init :  init,
+	test : test
 };
 
 module.exports = Shippo;

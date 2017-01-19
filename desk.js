@@ -25,24 +25,40 @@ function getStoreData(type, node) {
 	try {
 		var url = "https://" + siteName + ".desk.com/api/v2/customers";
 		var args = {
-            headers : {
-                Authorization : "Basic " + b64EncodeUnicode(apiKey + ":" + apiPassword),
-                Accept : "application/json"
-            }
-        };
-        client.get(url, args, function(data, res) {
-        	try {
-        		var status = parseInt(res.statusCode/100);
-        		if(status == 2) {
-        			formCustomer(data._embedded.entries, node);
-        		}
-        	} catch(e) {
-        		emitter.emit('error', e.message, e.stack, url, node);
-        	}
-        })
+			headers : {
+				Authorization : "Basic " + b64EncodeUnicode(apiKey + ":" + apiPassword),
+				Accept : "application/json"
+			}
+		};
+		client.get(url, args, function(data, res) {
+			try {
+				var status = parseInt(res.statusCode/100);
+				if(status == 2) {
+					formCustomer(data._embedded.entries, node);
+				} else {
+					if(status == 5) {
+						emitter.emit('error', 'Server Error in Desk', '', url, node);
+					}
+					if(data.hasOwnProperty('message')) {
+						errMsg = data.message;
+					}
+					if(data.hasOwnProperty('errors')) {
+						errMsg = data.errors;
+						if(data.errors.hasOwnProperty('emails')) {
+							errMsg = 'Email ' + reqObj.email + ' has already ' + data.errors.emails[0].value[0];
+						}
+					}
+					emitter.emit('error', errMsg, data, url, node);
+				}
+			} catch(e) {
+				emitter.emit('error', e.message, e.stack, url, node);
+			}
+		}).on('error', function(err) {
+			emitter.emit('error', errMsg, args.data, url, node);
+		});
 	} catch(e) {
-        emitter.emit('error', e.message, e.stack, "", node);
-    }
+		emitter.emit('error', e.message, e.stack, "", node);
+	}
 }
 
 function formCustomer(customerArr, node) {
@@ -54,14 +70,14 @@ function formCustomer(customerArr, node) {
 		}
 		for (var i = 0; i < customerArr.length; i++) {
 			resObj = {};
-		 	obj = customerArr[i];
-		 	resObj.id = obj.id;
-		 	resObj.firstName = obj.first_name;
-		 	resObj.lastName = obj.last_name;
-		 	resObj.email = obj.emails[0].value;
-		 	resObj.createdAt = obj.created_at;
-		 	resObj.updatedAt = obj.updated_at;
-		 	resObj.slackFlag = false;
+			obj = customerArr[i];
+			resObj.id = obj.id;
+			resObj.firstName = obj.first_name;
+			resObj.lastName = obj.last_name;
+			resObj.email = obj.emails[0].value;
+			resObj.createdAt = obj.created_at;
+			resObj.updatedAt = obj.updated_at;
+			resObj.slackFlag = false;
 			if(actionName == 'slack' && i == 0) {
 				resObj.slackFlag = true;
 			}
@@ -69,12 +85,12 @@ function formCustomer(customerArr, node) {
 			if(i == customerArr.length-1) {
 				resObj.isLast = true;
 			}
-		 	resArr[i] = resObj;
-		 }
-		 post(resArr, node, '');
+			resArr[i] = resObj;
+		}
+		post(resArr, node, '');
 	} catch(e) {
-        emitter.emit('error', e.message, e.stack, "", node);
-    }
+		emitter.emit('error', e.message, e.stack, "", node);
+	}
 }
 
 function postStoreData(type, node) {
@@ -128,7 +144,10 @@ function postCase(url, node, type) {
 				if(status == 2) {
 					msg = "Case for " + reqObj.email + " created successfully in Desk.";
 					post(data, node, msg);
-				} else {					
+				} else {
+					if(status == 5) {
+						emitter.emit('error', 'Server Error in Desk', '', url, node);
+					}					
 					if(data.hasOwnProperty('message')) {
 						errMsg = data.message;
 					}
@@ -195,7 +214,10 @@ function postCustomer(url, node, type) {
 				if(status == 2) {
 					msg = "Customer for " + reqObj.email + " created successfully in Desk.";
 					post(data, node, msg);
-				} else {					
+				} else {
+					if(status == 5) {
+						emitter.emit('error', 'Server Error in Desk', '', url, node);
+					}					
 					if(data.hasOwnProperty('message')) {
 						errMsg = data.message;
 					}
@@ -272,6 +294,9 @@ function updateStoreData(url, node, type) {
 							post(data, node, msg);
 						}
 					} else {
+						if(status == 5) {
+							emitter.emit('error', 'Server Error in Desk', '', url, node);
+						}
 						if(data.hasOwnProperty('message')) {
 							errMsg = data.message;
 						}
@@ -285,8 +310,8 @@ function updateStoreData(url, node, type) {
 			});
 		});
 	} catch(e) {
-        emitter.emit('error', e.message, e.stack, "", node);
-    }
+		emitter.emit('error', e.message, e.stack, "", node);
+	}
 }
 
 function getCustomerId(url, node, type, callback) {
@@ -312,6 +337,9 @@ function getCustomerId(url, node, type, callback) {
 							callback(id);
 						}
 					} else {
+if(status == 5) {
+        				emitter.emit('error', 'Server Error in Desk', '', url, node);
+        			}
 						if(data.hasOwnProperty('message')) {
 							errMsg = data.message;
 						}
@@ -376,7 +404,7 @@ function test(request, callback) {
 	try {
 		var credentials = request.credentials;
 		apiKey = credentials.apiKey;
-		apiPassword = credentials.apiPassword;
+		apiPassword = credentials.password;
 		siteName = credentials.siteName;
 		testApp(callback);
 	} catch(e) {

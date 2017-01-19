@@ -16,8 +16,8 @@ function run(node) {
 		actionName = node.connection.actionName.toLowerCase();
 		var url = "https://login.salesforce.com/services/oauth2/token";
 		var postData = "grant_type=password&username=" + encodeURIComponent(userName) 
-			+ "&password=" + password + securityToken + "&client_id="
-			+ clientId + "&client_secret=" + clientSecret;
+		+ "&password=" + password + securityToken + "&client_id="
+		+ clientId + "&client_secret=" + clientSecret;
 		var args = {
 			data : postData,
 			headers : { "Content-Type":"application/x-www-form-urlencoded"}
@@ -91,41 +91,43 @@ function getObjectDetails(dataArr, type, node) {
 		};
 		var obj;
 		var resArr = [];
-		var i = 0;
-		if(dataArr.length == 0) {
-			errMsg = 'There is no records in '+ type;
-			emitter.emit('error',errMsg,"", "",node);
-		} else {
-			var length = dataArr.length;
-			async.forEach(dataArr, function(obj){
-				var newUrl = url + "/" + obj.Id;
-				client.get(newUrl, args, function(data, res) {
-					try {
-						var status = parseInt(res.statusCode/100);
-						if( status == 2) {
-							resArr[i] = data;
-							i++;
-							length--;
-							if(length == 0) {
-								if(type.toLowerCase() == "account") {
-									formCustomerFromAccount(resArr, node);
-								} else {
-									formCustomer(resArr, type, node);
-								}
-							}														
-						} else {
-							emitter.emit('error',errMsg,"", newUrl, node);
-						}
-					} catch(e) {
-						emitter.emit('error',e.message, e.stack, "", node);
-					}	 
-				}).on('error', function(err){
-					emitter.emit('error',errMsg,"", newUrl, node);
-				});
-			}, function(error) {
-			emitter.emit('error',error,"","",node);
-			});	
+		var msgPrefix = 'No '
+		if(node.optionType.toLowerCase() == 'new') {
+			msgPrefix = 'No new ';
 		}
+		if(dataArr.length == 0) {
+			errMsg = msgPrefix + type + 's found in SalesForce';
+			emitter.emit('error',errMsg,"", "",node);
+			return;
+		}
+		var length = dataArr.length;
+		async.forEach(dataArr, function(obj) {
+			var newUrl = url + "/" + obj.Id;
+			client.get(newUrl, args, function(data, res) {
+				try {
+					var status = parseInt(res.statusCode/100);
+					if( status == 2) {
+						resArr.push(data);
+						length--;
+						if(length == 0) {
+							if(type.toLowerCase() == "account") {
+								formCustomerFromAccount(resArr, node);
+							} else {
+								formCustomer(resArr, type, node);
+							}
+						}														
+					} else {
+						emitter.emit('error',errMsg,"", newUrl, node);
+					}
+				} catch(e) {
+					emitter.emit('error',e.message, e.stack, "", node);
+				}	 
+			}).on('error', function(err){
+				emitter.emit('error',errMsg,"", newUrl, node);
+			});
+		}, function(error) {
+			emitter.emit('error',error,"","",node);
+		});			
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
@@ -542,8 +544,8 @@ function testApp(callback) {
 	try {
 		var url = "https://login.salesforce.com/services/oauth2/token";
 		var postData = "grant_type=password&username=" + encodeURIComponent(userName) 
-			+ "&password=" + password + securityToken + "&client_id="
-			+ clientId + "&client_secret=" + clientSecret;
+		+ "&password=" + password + securityToken + "&client_id="
+		+ clientId + "&client_secret=" + clientSecret;
 		var args = {
 			data : postData,
 			headers : { "Content-Type":"application/x-www-form-urlencoded"}
@@ -554,9 +556,9 @@ function testApp(callback) {
 				var status = parseInt(res.statusCode/100);
 				if(status == 2) {
 					result = {
-		                status :'success',
-		                response: data
-		            };
+						status :'success',
+						response: data
+					};
 				} else {
 					if(data.hasOwnProperty("error_description")) {
 						errMsg = data.error_description;
@@ -565,12 +567,12 @@ function testApp(callback) {
 						errMsg = data[0].message;
 					}
 					result = {
-		                status :'error',
-		                response: errMsg
-		            };			
+						status :'error',
+						response: errMsg
+					};			
 				}	
 				callback(result);
-	        } catch(e) {
+			} catch(e) {
 				callback({status:"error", response:e.stack});
 			}			
 		}).on('error', function(err) {
@@ -610,8 +612,8 @@ function test(request, callback) {
 }
 
 var SalesForce = {
-		init : init,
-		test : test  
+	init : init,
+	test : test  
 };
 
 module.exports = SalesForce;

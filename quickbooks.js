@@ -6,7 +6,7 @@ var client = new Client();
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var consumerKey, consumerSecret, accessToken, tokenSecret, accountType, companyId, url,
-	incomeAccNo, incomeAccName, expenseAccNo, expenseAccName, assetAccNo, assetAccName, actionName;
+incomeAccNo, incomeAccName, expenseAccNo, expenseAccName, assetAccNo, assetAccName, actionName;
 var errMsg = 'Error in connecting Quickbooks online';
 
 function run(node) {
@@ -88,11 +88,16 @@ function formCustomer(dataArr, node) {
 	try {
 		var resArr = [];
 		var obj,resObj;
+		var msgPrefix = 'No '
+		if(node.optionType.toLowerCase() == 'new') {
+			msgPrefix = 'No new ';
+		}
 		var lastName = phone = company = street = city = state = country = '';
 		if(dataArr.length == 0) {
-			errMsg = 'No data found in Quickbooks';
+			errMsg = msgPrefix + 'customers found in Quickbooks';
 			emitter.emit('error',errMsg, "","", node);
-		}
+			return;
+		} 
 		for(var i = 0; i < dataArr.length; i++) {
 			resObj = {};
 			obj = dataArr[i];
@@ -139,7 +144,7 @@ function formCustomer(dataArr, node) {
 			}
 			resArr[i] = resObj;		
 		}
-		post(resArr, node,"");
+		post(resArr, node,"");		
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
@@ -151,10 +156,15 @@ function formProduct(dataArr, node) {
 		var obj,resObj;
 		var sku = '';
 		var qtyOnHand = '';
-		if(dataArr.length == 0) {
-			errMsg = 'No data found in Quickbooks';
-			emitter.emit('error',errMsg, "","", node);
+		var msgPrefix = 'No '
+		if(node.optionType.toLowerCase() == 'new') {
+			msgPrefix = 'No new ';
 		}
+		if(dataArr.length == 0) {
+			errMsg = msgPrefix + 'products found in Quickbooks';
+			emitter.emit('error',errMsg, "","", node);
+			return;
+		} 
 		for(var i = 0; i < dataArr.length; i++) {
 			resObj = {};
 			obj = dataArr[i];
@@ -181,7 +191,7 @@ function formProduct(dataArr, node) {
 			}
 			resArr[i] = resObj;		
 		}
-		post(resArr, node);
+		post(resArr, node);			
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
@@ -189,12 +199,17 @@ function formProduct(dataArr, node) {
 
 function formOrder(dataArr, node) {
 	try {
-	var resArr = [];
-	var obj,resObj;
-	var email = '';
-	if(dataArr.length == 0) {
-		errMsg = 'No data found in Quickbooks';
+		var resArr = [];
+		var obj,resObj;
+		var email = '';
+		var msgPrefix = 'No '
+		if(node.optionType.toLowerCase() == 'new') {
+			msgPrefix = 'No new ';
+		}
+		if(dataArr.length == 0) {
+			errMsg = msgPrefix + 'orders found in Quickbooks';
 			emitter.emit('error',errMsg, "","", node);
+			return;
 		}
 		for(var i = 0; i < dataArr.length; i++) {
 			resObj = {};
@@ -349,7 +364,7 @@ function postCustomer(url,  oauth, node, callback) {
 				} catch(e) {
 					emitter.emit('error',e.message, e.stack, "", node);
 				}          
-		    }).on('error',function(err) {
+			}).on('error',function(err) {
 				emitter.emit('error',errMsg, err, url, node);
 			});
 		}, 8000);
@@ -393,8 +408,8 @@ function postProduct(url, oauth, node, item, callback) {
 			client.post(url, args, function (data, res) {
 				try {
 					var status = parseInt(res.statusCode/100);
-			    	if(status == 2){
-			    		if( typeof callback == 'undefined') {
+					if(status == 2){
+						if( typeof callback == 'undefined') {
 							var msg = 'Product ' + obj.name + ' created successfully in Quickbooks';
 							post(data, node, msg);
 						} else {
@@ -418,8 +433,8 @@ function postProduct(url, oauth, node, item, callback) {
 				} catch(e) {
 					emitter.emit('error',e.message, e.stack, "", node);
 				}
-		    }).on('error',function(err) {
-		       emiitter.emit("error",errMsg, args.data, url, node);
+			}).on('error',function(err) {
+				emiitter.emit("error",errMsg, args.data, url, node);
 			});
 		}, 8000);
 	} catch(e) {
@@ -489,9 +504,9 @@ function postInvoiceOrSalesReceipt(url, type, oauth, node) {
 							}
 							var msg = msgType + ' for the order with the id ' + obj.id + 
 							' created successfully in Quickbooks with the number ' + docNo;
-	            			post(data, node, msg);
-	            		} else {
-	            			if(data.hasOwnProperty('Fault')) {
+							post(data, node, msg);
+						} else {
+							if(data.hasOwnProperty('Fault')) {
 								if(data.Fault.hasOwnProperty('Error')) {
 									var error = data.Fault.Error[0];
 									if(error.hasOwnProperty('Message')) {

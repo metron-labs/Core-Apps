@@ -34,6 +34,7 @@ function getCountries(oauth, node, dataArr) {
                         var status = parseInt(err.statusCode/100);
                         if(status == 5) {
                             emitter.emit('error', 'Server Error in Etsy', "", url, node);
+                            return;
                         } 
                     }
                     if(err.hasOwnProperty('data')) {
@@ -89,6 +90,7 @@ function getStoreData(oauth, node) {
                         var status = parseInt(err.statusCode/100);
                         if(status == 5) {
                             emitter.emit('error', 'Server Error in Etsy', "", url, node);
+                            return;
                         } 
                     }
                     if(err.hasOwnProperty('data')) {
@@ -98,7 +100,11 @@ function getStoreData(oauth, node) {
                 } else {
                     var result = JSON.parse(data);
                     if(result.results.length == 0 && page == 1) {
-                        emitter.emit('error', 'No orders found in Etsy', data, url, node);
+                        var msgPrefix = 'No '
+                        if(node.optionType.toLowerCase() == 'new') {
+                            msgPrefix = 'No new ';
+                        }
+                        emitter.emit('error', msgPrefix + 'orders found in Etsy', data, url, node);
                         return;
                     }
                     if(countries.length == 0) {
@@ -161,25 +167,25 @@ function formOrder(dataArr, oauth, node) {
             resObj.billingAddress = billAddr;
             resObj.shippingAddress = billAddr;
             resObj.isLast = false;
-            if(page == null) {
+            if(page == null && dataArr.length-1) {
                 resObj.isLast = true;
             }
             resArr[i] = resObj; 
-        if ( i == dataArr.length - 1) {
-			getItems(resArr, oauth, node);       
-		}      
-        }
+            if ( i == dataArr.length - 1) {
+             getItems(resArr, oauth, node);       
+         }      
+     }
        // getItems(resArr, oauth, node);       
-    } catch(e) {
-        emitter.emit('error',e.message, e.stack, "", node);
-    }
+   } catch(e) {
+    emitter.emit('error',e.message, e.stack, "", node);
+}
 }
 
 function getItems(dataArr, oauth, node) {
     try {
         var length = dataArr.length;
         var items = [];
-var finalResArr = [];
+        var finalResArr = [];
         dataArr.forEach(function(obj) {
             var url = baseUrl +  'receipts/' + obj.name + '/transactions';
             setTimeout(function() {
@@ -187,7 +193,7 @@ var finalResArr = [];
                     try {
                         if(err) {
                             length--;
-                           if(err.hasOwnProperty('statusCode')) {
+                            if(err.hasOwnProperty('statusCode')) {
                                 var status = parseInt(err.statusCode/100);
                                 if(status == 5) {
                                     emitter.emit('error', 'Server Error in Etsy', "", url, node);
@@ -200,12 +206,12 @@ var finalResArr = [];
                         } else {                  
                             var quantity = 0;                      
                             var response = JSON.parse(data);
-console.log("data......"+data);
-console.log("response %j",response );
-				if(!response.hasOwnProperty("results")){
-length--;
-return;
-}
+                            console.log("data......"+data);
+                            console.log("response %j",response );
+                            if(!response.hasOwnProperty("results")){
+                                length--;
+                                return;
+                            }
                             var itemArr = response.results;
                             var itemObj, item;               
                             for(var i = 0; i < itemArr.length; i++) {
@@ -221,8 +227,8 @@ return;
                             obj.items = items;
                             obj.name = obj.id;
                             obj.quantity = quantity;
-				var count = finalResArr.length;
-				finalResArr[count] = obj;
+                            var count = finalResArr.length;
+                            finalResArr[count] = obj;
                             length--;                        
                         }
                         if(length == 0) {
@@ -238,8 +244,8 @@ return;
             }, 5000);
         });
     } catch(e) {
-     emitter.emit('error',e.message, e.stack, "", node);
- }
+       emitter.emit('error',e.message, e.stack, "", node);
+   }
 }
 
 function post(response, node, message) {

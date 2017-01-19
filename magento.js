@@ -89,8 +89,13 @@ function setOrders(ordersArr, node) {
 		var resArr = [];
 		var obj, resObj;
 		var actionName = node.connection.actionName.toLowerCase();
+		var msgPrefix = 'No ';
+		if(node.optionType.toLowerCase() == 'new') {
+			msgPrefix = 'No new ';
+		}
 		if(ordersArr.length == 0) {
-			emitter.emit("error", "No orders found in Magento", "", "", node);
+			emitter.emit("error", msgPrefix + 'orders found in Magento', "", "", node);
+			return;
 		}
 		var length = ordersArr.length;
 		for(var i = 0; i < ordersArr.length; i++) {
