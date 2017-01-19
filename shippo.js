@@ -34,7 +34,7 @@ function run(node) {
 			createOrder(url, type, node);
 		}	
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -79,7 +79,7 @@ function getStoreData(url, args, type, node) {
 			emitter.emit('error', errMsg, '', url, node);
 		});
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 
 }
@@ -196,13 +196,13 @@ function getOrderTransactions(resArr, args, node) {
 						}
 					}																
 				}).on('error', function(err){
-					emitter.emit('error',errMsg, "", transUrl, node);
+					emitter.emit('error', errMsg, "", transUrl, node);
 				});
 			}}, function(error) {
-				emitter.emit('error',errMsg, '', transUrl, node);
+				emitter.emit('error', errMsg, '', transUrl, node);
 			});
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}			
 }
 
@@ -235,14 +235,14 @@ function getOrderRates(resArr, args, node) {
 							if(data.hasOwnProperty("detail")) {
 								errMsg = data.detail;
 							}
-							emitter.emit('error',errMsg, "", rateUrl, node);
+							emitter.emit('error', errMsg, "", rateUrl, node);
 						}
 					}					
 				}).on('error', function(err) {
-					emitter.emit('error',errMsg, "", rateUrl, node);
+					emitter.emit('error', errMsg, "", rateUrl, node);
 				});
 			}}, function(error){
-				emitter.emit('error',errMsg, '', rateUrl, node);
+				emitter.emit('error', errMsg, '', rateUrl, node);
 			});
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
@@ -301,7 +301,7 @@ function formTransaction(dataArr, args,node) {
 		}
 		getTransactionsRate(resArr, args, node);
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -336,7 +336,7 @@ function getTransactionsRate(resArr, args, node) {
 						}
 					}
 				}).on('error', function(err) {
-					emitter.emit('error',errMsg, "", rateUrl, node);
+					emitter.emit('error', errMsg, "", rateUrl, node);
 				});
 			}}, function(error){
 				emitter.emit('error', errMsg, '', rateUrl, node);
@@ -379,17 +379,17 @@ function getShipment(resArr, args, node) {
 							if(data.hasOwnProperty("detail")) {
 								errMsg = data.detail;
 							}
-							emitter.emit('error',errMsg, "",shipmentUrl, node);
+							emitter.emit('error', errMsg, "", shipmentUrl, node);
 						}
 					}				
 				}).on('error', function(err) {
-					emitter.emit('error',errMsg, "",shipmentUrl, node);
+					emitter.emit('error', errMsg, "", shipmentUrl, node);
 				});
 			}}, function(error){
 				emitter.emit('error', errMsg, '', shipmentUrl, node);
 			});
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}	
 }
 
@@ -434,11 +434,11 @@ function getAddress(resArr, args, node) {
 							if(data.hasOwnProperty("detail")) {
 								errMsg = data.detail;
 							}
-							emitter.emit('error',errMsg, "", addressUrl, node);
+							emitter.emit('error', errMsg, "", addressUrl, node);
 						}
 					}
 				}).on('error', function(err) {
-					emitter.emit('error',errMsg, "", addressUrl, node);
+					emitter.emit('error', errMsg, "", addressUrl, node);
 				});
 			}
 		}, function(error){
@@ -513,13 +513,13 @@ function getCustomDeclarations(resArr, args, node) {
 									if(data.hasOwnProperty("detail")) {
 										errMsg = data.detail;
 									}
-									emitter.emit('error',errMsg, "", itemUrl, node);
+									emitter.emit('error', errMsg, "", itemUrl, node);
 								}							
 							}).on('error', function(err) {
-								emitter.emit('error',errMsg, "", itemUrl, node);
+								emitter.emit('error', errMsg, "", itemUrl, node);
 							});
 						}, function(error){
-							emitter.emit('error',error, "", itemUrl, node);
+							emitter.emit('error', error, "", itemUrl, node);
 						});
 					} else {
 						if(status == 5) {
@@ -528,11 +528,11 @@ function getCustomDeclarations(resArr, args, node) {
 							if(data.hasOwnProperty("detail")) {
 								errMsg = data.detail;
 							}
-							emitter.emit('error',errMsg, "", declUrl, node);
+							emitter.emit('error', errMsg, "", declUrl, node);
 						}
 					}	
 				}).on('error', function(err) {
-					emitter.emit('error',errMsg, '', declUrl, node);
+					emitter.emit('error', errMsg, '', declUrl, node);
 				});
 			}				
 		}, function(error){
@@ -717,17 +717,17 @@ function postCustomItem(url, orderObj, node) {
 						} else if(data.hasOwnProperty(__all__)) {
 							errMsg = data.__all__[0];
 						}					
-						emitter.emit('error',errMsg, newUrl, args.data, node);
+						emitter.emit('error', errMsg, newUrl, args.data, node);
 					}
 				}
 			}).on('error', function(err) {
-				emitter.emit('error',errMsg, args.data, newUrl, node);
+				emitter.emit('error', errMsg, args.data, newUrl, node);
 			});
 		}, function(error) {
-			emitter.emit('error',errMsg, '', newUrl, node);
+			emitter.emit('error', errMsg, '', newUrl, node);
 		});
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}				
 }
 
@@ -774,14 +774,14 @@ function postCustomDeclarations(url, orderObj, node) {
 					} else if(data.hasOwnProperty(__all__)) {
 						errMsg = data.__all__[0];
 					}				
-					emitter.emit('error', errMsg,args.data, newUrl, node);
+					emitter.emit('error', errMsg, args.data, newUrl, node);
 				}
 			}
 		}).on('error', function(err) {
 			emitter.emit('error', errMsg, args.data, newUrl, node);
 		});	
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -865,14 +865,14 @@ function postShipment(url, orderObj, transObj, tag, node) {
 					} else if(data.hasOwnProperty('__all__')) {
 						errMsg = data.__all__[0];
 					}					
-					emitter.emit('error',errMsg, args.data, newUrl, node);
+					emitter.emit('error', errMsg, args.data, newUrl, node);
 				}
 			}
 		}).on('error', function(err) {
-			emitter.emit("error",errMsg, args.data, newUrl, node);
+			emitter.emit("error", errMsg, args.data, newUrl, node);
 		});
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -932,13 +932,13 @@ function postTransaction(url, orderObj, shipObj, tag, node) {
 				if(status == 5) {
 					emitter.emit('error','Server Error in Shippo', '', newUrl, node);
 				}
-				emitter.emit('error',errMsg, args.data, newUrl, node);
+				emitter.emit('error', errMsg, args.data, newUrl, node);
 			}			
 		}).on('error', function(err) {
-			emitter.emit('error',errMsg, args.data, newUrl, node);
+			emitter.emit('error', errMsg, args.data, newUrl, node);
 		});
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -982,7 +982,7 @@ function findResult(url, orderObj, transObj, tag, node) {
 			emitter.emit('error', errMsg, '', newUrl, node);
 		});
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack,"",node);
+		emitter.emit('error', e.message, e.stack,"",node);
 	}
 }
 

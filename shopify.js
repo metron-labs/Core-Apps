@@ -166,7 +166,7 @@ function formCustomer(dataArr, node) {
 			getDataCount(node);
 		}
 	} catch(e) {
-		emitter.emit('error',e.message, "", "", node);
+		emitter.emit('error', e.message, "", "", node);
 	}
 }
 
@@ -244,11 +244,11 @@ function formOrder(dataArr, node) {
 			getDataCount(node);
 		}
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
-function formProduct(dataArr,node) {
+function formProduct(dataArr, node) {
 	try {
 		var obj,resObj;
 		var resArr = [];
@@ -283,7 +283,7 @@ function formProduct(dataArr,node) {
 			getDataCount(node);
 		}
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -304,7 +304,7 @@ function postDataModel(node) {
 			getProductId(url, node, 'product');
 		}
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -607,7 +607,7 @@ function updateProduct(url, obj, node, tag, callback) {
 						emitter.emit('error', errMsg, data, newUrl, node);
 					}
 				} catch(e) {
-					emitter.emit('error',e.message, e.stack, newUrl, node);
+					emitter.emit('error', e.message, e.stack, newUrl, node);
 				}
 			}).on('error', function(err) {
 				emitter.emit('error', errMsg, "", newUrl, node);
@@ -664,7 +664,7 @@ function createProduct(url, obj, node, callback) {
 						emitter.emit('error', errMsg, data, url, node);
 					}
 				} catch(e) {
-					emitter.emit('error',e.message, e.stack, url, node);
+					emitter.emit('error', e.message, e.stack, url, node);
 				}
 			}).on('error', function(err) {
 				emitter.emit('error', errMsg, "", url, node);

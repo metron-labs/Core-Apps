@@ -29,7 +29,7 @@ function run(node) {
 			postObjects(url, type, oauth, node);
 		}
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -49,16 +49,16 @@ function getStoreData(url, type, oauth, node) {
 		oauth.get(url,accessToken,tokenSecret,function(err,data,res) {
 			try {
 				if(err) {
-					emitter.emit("error",errMsg, "", url, node);
+					emitter.emit("error", errMsg, "", url, node);
 				} else {
-					formDataModel(data,type,node);
+					formDataModel(data, type, node);
 				}
 			} catch(e) {
-				emitter.emit('error',e.message, e.stack, "", node);
+				emitter.emit('error', e.message, e.stack, "", node);
 			}
 		});
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -80,7 +80,7 @@ function formDataModel(data, type, node) {
 			formProduct(dataArr,node);
 		}
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -88,14 +88,14 @@ function formCustomer(dataArr, node) {
 	try {
 		var resArr = [];
 		var obj,resObj;
-		var msgPrefix = 'No '
+		var msgPrefix = 'No ';
 		if(node.optionType.toLowerCase() == 'new') {
 			msgPrefix = 'No new ';
 		}
 		var lastName = phone = company = street = city = state = country = '';
 		if(dataArr.length == 0) {
 			errMsg = msgPrefix + 'customers found in Quickbooks';
-			emitter.emit('error',errMsg, "","", node);
+			emitter.emit('error', errMsg, "","", node);
 			return;
 		} 
 		for(var i = 0; i < dataArr.length; i++) {
@@ -146,7 +146,7 @@ function formCustomer(dataArr, node) {
 		}
 		post(resArr, node,"");		
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -162,7 +162,7 @@ function formProduct(dataArr, node) {
 		}
 		if(dataArr.length == 0) {
 			errMsg = msgPrefix + 'products found in Quickbooks';
-			emitter.emit('error',errMsg, "","", node);
+			emitter.emit('error', errMsg, "","", node);
 			return;
 		} 
 		for(var i = 0; i < dataArr.length; i++) {
@@ -193,7 +193,7 @@ function formProduct(dataArr, node) {
 		}
 		post(resArr, node);			
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -208,7 +208,7 @@ function formOrder(dataArr, node) {
 		}
 		if(dataArr.length == 0) {
 			errMsg = msgPrefix + 'orders found in Quickbooks';
-			emitter.emit('error',errMsg, "","", node);
+			emitter.emit('error', errMsg, "", "", node);
 			return;
 		}
 		for(var i = 0; i < dataArr.length; i++) {
@@ -277,7 +277,7 @@ function formOrder(dataArr, node) {
 		}
 		post(resArr, node);
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -288,10 +288,10 @@ function postObjects(url, type, oauth, node) {
 		} else if(type == "product") {
 			postProduct(url, oauth, node);
 		} else {
-			getProductDetails(url,type, oauth, node);
+			getProductDetails(url, type, oauth, node);
 		}
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -359,17 +359,17 @@ function postCustomer(url,  oauth, node, callback) {
 								}							
 							}
 						}
-						emitter.emit('error',errMsg, data, url, node);
+						emitter.emit('error', errMsg, data, url, node);
 					}
 				} catch(e) {
-					emitter.emit('error',e.message, e.stack, "", node);
+					emitter.emit('error', e.message, e.stack, "", node);
 				}          
 			}).on('error',function(err) {
-				emitter.emit('error',errMsg, err, url, node);
+				emitter.emit('error', errMsg, errMsg, url, node);
 			});
 		}, 8000);
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }	
 
@@ -428,13 +428,13 @@ function postProduct(url, oauth, node, item, callback) {
 								}							
 							}
 						}
-						emitter.emit('error',errMsg, data, url, node);
+						emitter.emit('error', errMsg, data, url, node);
 					}
 				} catch(e) {
-					emitter.emit('error',e.message, e.stack, "", node);
+					emitter.emit('error', e.message, e.stack, "", node);
 				}
 			}).on('error',function(err) {
-				emiitter.emit("error",errMsg, args.data, url, node);
+				emiitter.emit("error", errMsg, args.data, url, node);
 			});
 		}, 8000);
 	} catch(e) {
@@ -517,13 +517,13 @@ function postInvoiceOrSalesReceipt(url, type, oauth, node) {
 									}							
 								}
 							}
-							emitter.emit('error',errMsg, data, url, node);
+							emitter.emit('error', errMsg, data, url, node);
 						}
 					} catch(e) {
-						emitter.emit('error',e.message, e.stack, "", node);
+						emitter.emit('error', e.message, e.stack, "", node);
 					}            			
 				}).on('error',function(err) {
-					emitter.emit('error',errMsg, args.data, newUrl, node);
+					emitter.emit('error', errMsg, args.data, newUrl, node);
 				});	
 			}, 8000);				
 		});	
@@ -542,7 +542,7 @@ function getCustomerId(url, oauth, node, callback) {
 			oauth.get(newUrl, accessToken, tokenSecret, function(err, data, res) {
 				try {
 					if(err) {
-						emitter.emit('error',errMsg, "", newUrl, node);
+						emitter.emit('error', errMsg, "", newUrl, node);
 					} else {
 						var result = JSON.parse(data);
 						var queryRes = result.QueryResponse;
@@ -558,12 +558,12 @@ function getCustomerId(url, oauth, node, callback) {
 						}
 					}
 				} catch(e) {
-					emitter.emit('error',e.message, e.stack, "", node);
+					emitter.emit('error', e.message, e.stack, "", node);
 				}
 			});
 		}, 8000);
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -592,12 +592,12 @@ function getItemId(url, oauth, item, node, callback) {
 						}
 					}
 				} catch(e) {
-					emitter.emit('error',e.message, e.stack, "", node);
+					emitter.emit('error', e.message, e.stack, "", node);
 				}
 			});
 		}, 8000);
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -676,7 +676,7 @@ function init(node) {
 		assetAccName = credentials.assetAccountName;
 		run(node);
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 

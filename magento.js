@@ -33,14 +33,14 @@ function run(node) {
 						if(errMsg.includes('%resources')) {
 							errMsg.slice('%resources');
 						}
-						emitter.emit('error', errMsg, data, newUrl, node);
+						emitter.emit('error', errMsg, '', newUrl, node);
 					}
 				}
 			} catch(e) {
 				emitter.emit('error', e.message, e.stack, newUrl, node);
 			}
 		}).on('error', function(err) {
-			emitter.emit('error', errMsg, err, newUrl, node);
+			emitter.emit('error', errMsg, '', newUrl, node);
 		});
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
@@ -77,7 +77,7 @@ function getOrders(node) {
 				emitter.emit('error', e.message, e.stack, newUrl, node);
 			}
 		}).on('error', function(err) {
-			emitter.emit('error', errMsg, err, newUrl, node);
+			emitter.emit('error', errMsg, '', newUrl, node);
 		});
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);

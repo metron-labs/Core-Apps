@@ -174,7 +174,7 @@ function getUserDetails(dataArr, node) {
 					emitter.emit('error', e.message, e.stack, url, node);
 				}
 			}).on('error', function(err) {
-				emitter.emit('error', err, args.data, url, node);
+				emitter.emit('error', errMsg, args.data, url, node);
 			});
 		});
 	} catch(e) {

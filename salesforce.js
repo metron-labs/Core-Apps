@@ -40,17 +40,16 @@ function run(node) {
 					{
 						errMsg = data[0].message;
 					}
-					emitter.emit('error',errMsg,args.data, url,node);
+					emitter.emit('error', errMsg,args.data, url,node);
 				}
 			} catch(e) {
-				emitter.emit('error',e.message, e.stack, url, node);
+				emitter.emit('error', e.message, e.stack, url, node);
 			}				
 		}).on('error', function(err) {
-			console.log(errMsg, err.request.options);
-			emitter.emit('error',errMsg,args.data, url, node);
+			emitter.emit('error', errMsg,args.data, url, node);
 		});
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }	
 
@@ -70,16 +69,16 @@ function getSalesForceObjects(type, node) {
 					if(result[0].hasOwnProperty("message")) {
 						errMsg = result[0].message;
 					}
-					emitter.emit('error',errMsg,"", url, node);
+					emitter.emit('error', errMsg,"", url, node);
 				}
 			} catch(e) {
-				emitter.emit('error',e.message, e.stack, "", node);
+				emitter.emit('error', e.message, e.stack, "", node);
 			}		
 		}).on('error', function(err) {
-			emitter.emit('error',errMsg,"", url, node);
+			emitter.emit('error', errMsg,"", url, node);
 		});
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -91,7 +90,7 @@ function getObjectDetails(dataArr, type, node) {
 		};
 		var obj;
 		var resArr = [];
-		var msgPrefix = 'No '
+		var msgPrefix = 'No ';
 		if(node.optionType.toLowerCase() == 'new') {
 			msgPrefix = 'No new ';
 		}
@@ -117,19 +116,19 @@ function getObjectDetails(dataArr, type, node) {
 							}
 						}														
 					} else {
-						emitter.emit('error',errMsg,"", newUrl, node);
+						emitter.emit('error', errMsg, "", newUrl, node);
 					}
 				} catch(e) {
 					emitter.emit('error',e.message, e.stack, "", node);
 				}	 
 			}).on('error', function(err){
-				emitter.emit('error',errMsg,"", newUrl, node);
+				emitter.emit('error', errMsg, "", newUrl, node);
 			});
 		}, function(error) {
-			emitter.emit('error',error,"","",node);
+			emitter.emit('error', errMsg, "", "", node);
 		});			
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -176,7 +175,7 @@ function formCustomer(dataArr, type, node) {
 		}
 		post(resArr, node,"");
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -212,7 +211,7 @@ function formCustomerFromAccount(dataArr, node) {
 		}
 		post(resArr, node,"");
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -306,28 +305,28 @@ function createLead(obj, node) {
 								if(data1[0].hasOwnProperty("message")) {
 									errMsg = data1[0].message;
 								}
-								emitter.emit('error',errMsg,postArgs.data, newUrl, node);
+								emitter.emit('error', errMsg, postArgs.data, newUrl, node);
 							}
 						} catch(e) {
-							emitter.emit('error',e.message, e.stack, "", node);
+							emitter.emit('error', e.message, e.stack, "", node);
 						}					
 					}).on('error',function(err1) {
-						emitter.emit('error',errMsg,postArgs.data, newUrl, node);
+						emitter.emit('error', errMsg, postArgs.data, newUrl, node);
 					});
 				} else {
 					if(data[0].hasOwnProperty("message")) {
 						errMsg = data[0].message;
 					}
-					emitter.emit('error',errMsg,"",url,node);
+					emitter.emit('error', errMsg, "", url, node);
 				}
 			} catch(e) {
-				emitter.emit('error',e.message, e.stack, "", node);
+				emitter.emit('error', e.message, e.stack, "", node);
 			}			
 		}).on('error', function(err) {
-			emitter.emit('error',errMsg,"",url,node);
+			emitter.emit('error', errMsg, "", url, node);
 		});
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
@@ -412,28 +411,28 @@ function createAccount(obj, node) {
 								if(data1[0].hasOwnProperty("message")) {
 									errMsg = data1[0].message;
 								}
-								emitter.emit('error',errMsg,postArgs.data,newUrl,node);
+								emitter.emit('error', errMsg, postArgs.data, newUrl, node);
 							}
 						} catch(e) {
-							emitter.emit('error',e.message, e.stack, "", node);
+							emitter.emit('error', e.message, e.stack, "", node);
 						}
 					}).on('error',function(err1) {
-						emitter.emit('error',errMsg,postArgs.data,newUrl,node);
+						emitter.emit('error',errMsg, postArgs.data,newUrl,node);
 					});
 				} else {
 					if(data[0].hasOwnProperty("message")) {
 						errMsg = data[0].message;
 					}
-					emitter.emit('error',errMsg,"",newUrl,node);
+					emitter.emit('error', errMsg, "", newUrl, node);
 				}
 			} catch(e) {
-				emitter.emit('error',e.message, e.stack, "", node);
+				emitter.emit('error', e.message, e.stack, "", node);
 			}			
 		}).on('error', function(err) {
-			emitter.emit('error',errMsg,"",url,node);
+			emitter.emit('error', errMsg, "", url, node);
 		});
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }	
 
@@ -509,28 +508,28 @@ function createContact(obj, node) {
 								if(data1[0].hasOwnProperty("message")) {
 									errMsg = data1[0].message;
 								}
-								emitter.emit('error',errMsg, postArgs.data, newUrl, node);
+								emitter.emit('error', errMsg, postArgs.data, newUrl, node);
 							}
 						} catch(e) {
-							emitter.emit('error',e.message, e.stack, "", node);
+							emitter.emit('error', e.message, e.stack, "", node);
 						}
 					}).on('error',function(err1) {
-						emitter.emit('error',errMsg,postArgs.data, newUrl, node);
+						emitter.emit('error', errMsg, postArgs.data, newUrl, node);
 					});
 				} else {
 					if(data[0].hasOwnProperty("message")) {
 						errMsg = data[0].message;
 					}
-					emitter.emit('error',errMsg,"",newUrl, node);
+					emitter.emit('error', errMsg,"",newUrl, node);
 				}
 			} catch(e) {
-				emitter.emit('error',e.message, e.stack, "", node);
+				emitter.emit('error', e.message, e.stack, "", node);
 			}
 		}).on('error', function(err) {
-			emitter.emit('error',errMsg,"",url, node);
+			emitter.emit('error', errMsg, "", url, node);
 		});
 	} catch(e) {
-		emitter.emit('error',e.message, e.stack, "", node);
+		emitter.emit('error', e.message, e.stack, "", node);
 	}
 }
 
