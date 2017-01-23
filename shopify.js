@@ -336,7 +336,7 @@ function createCustomer(url, node, callback) {
 		if(obj.hasOwnProperty("lastName")) {
 			lastName = obj.lastName;
 		}
-		var tag = node.connection.toUpperCase();
+		var tag = node.connection.triggerName.toUpperCase();
 		var postData = {
 			customer : {
 				first_name : name,
