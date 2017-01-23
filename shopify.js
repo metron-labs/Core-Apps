@@ -336,6 +336,7 @@ function createCustomer(url, node, callback) {
 		if(obj.hasOwnProperty("lastName")) {
 			lastName = obj.lastName;
 		}
+		var tag = node.connection.toUpperCase();
 		var postData = {
 			customer : {
 				first_name : name,
@@ -352,6 +353,7 @@ function createCustomer(url, node, callback) {
 					first_name: name,
 					country:country
 				}],
+				tags: tag,
 				"send_email_welcome": false
 			}
 		};
