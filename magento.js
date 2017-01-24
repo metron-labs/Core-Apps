@@ -4,6 +4,7 @@ var client = new Client();
 var emitter = require('../core-integration-server-v2/javascripts/emitter');;
 var url, userName, password, token;
 var errMsg = "Error in connecting Magento";
+var page = 1, count = 0, finalDataArr = [];
 
 function run(node) {
 	try {
@@ -50,7 +51,7 @@ function run(node) {
 function getOrders(node) {
 	try {
 		var basicKey = token.replace("\"", "");
-		var newUrl = url + "/index.php/rest/V1/orders?searchCriteria=";
+		var newUrl = url + "/index.php/rest/V1/orders?searchCriteria[pageSize]=10&searchCriteria[currentPage]=" + page;
 		var args = {
 			headers : {
 				Authorization : "Bearer " + basicKey,
@@ -61,6 +62,7 @@ function getOrders(node) {
 			try {
 				var status = parseInt(res.statusCode/100);
 				if(status == 2) {
+					count = data.total_count;
 					setOrders(data.items, node);
 				} else {
 					if(status == 5) {
@@ -170,7 +172,8 @@ function setOrders(ordersArr, node) {
 			resObj.items = itemsArr;
 			resObj.isLast = false;
 			resObj.slackFlag = false;
-			if(i == length-1) {
+			var length = finalDataArr.length + i;
+			if(length == count-1) {
 				resObj.isLast = true;
 				if(actionName == 'slack') {
 					resObj.slackFlag = true;
@@ -180,6 +183,11 @@ function setOrders(ordersArr, node) {
 			resArr[l] = resObj;
 		}
 		post(resArr, node, "");
+		finalDataArr = finalDataArr.concat(resArr);
+		if(finalDataArr.length != count) {
+			page++;
+			getOrders(node);
+		}
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}
