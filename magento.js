@@ -4,6 +4,7 @@ var client = new Client();
 var emitter = require('../core-integration-server-v2/javascripts/emitter');;
 var url, userName, password, token;
 var errMsg = "Error in connecting Magento";
+var page = 1, count = 0, finalDataArr = [];
 
 function run(node) {
 	try {
@@ -50,7 +51,7 @@ function run(node) {
 function getOrders(node) {
 	try {
 		var basicKey = token.replace("\"", "");
-		var newUrl = url + "/index.php/rest/V1/orders?searchCriteria=";
+		var newUrl = url + "/index.php/rest/V1/orders?searchCriteria[pageSize]=10&searchCriteria[currentPage]=" + page;
 		var args = {
 			headers : {
 				Authorization : "Bearer " + basicKey,
@@ -61,6 +62,7 @@ function getOrders(node) {
 			try {
 				var status = parseInt(res.statusCode/100);
 				if(status == 2) {
+					count = data.total_count;
 					setOrders(data.items, node);
 				} else {
 					if(status == 5) {
@@ -92,23 +94,21 @@ function setOrders(ordersArr, node) {
 		var msgPrefix = 'No ';
 		if(node.optionType.toLowerCase() == 'new') {
 			msgPrefix = 'No new ';
-		}
-		if(ordersArr.length == 0) {
-			emitter.emit("error", msgPrefix + 'orders found in Magento', "", "", node);
-			return;
-		}
+		}		
 		var length = ordersArr.length;
+		var pathStartTime = node.connection.startedAt;
+		var arr = pathStartTime.split('/');
+		var formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
+		var startDate = new Date(formattedDateStr);
 		for(var i = 0; i < ordersArr.length; i++) {
 			resObj = {};
 			obj = ordersArr[i];
-			var pathStartTime = node.connection.startedAt;
-			var arr = pathStartTime.split('/');
-			var formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
-			var startDate = new Date(formattedDateStr);
-			var cDate = new Date(obj.created_at);
-			var cUTCDate = new Date(cDate);
-			if(cUTCDate.getTime() < startDate.getTime()) {
-				continue;
+			if(node.optionType.toLowerCase() == 'new') {
+				var cDate = new Date(obj.created_at);
+				var cUTCDate = new Date(cDate);
+				if(cUTCDate.getTime() < startDate.getTime()) {
+					continue;
+				}
 			}
 			resObj.id = obj.increment_id;
 			resObj.email = obj.customer_email;
@@ -170,7 +170,8 @@ function setOrders(ordersArr, node) {
 			resObj.items = itemsArr;
 			resObj.isLast = false;
 			resObj.slackFlag = false;
-			if(i == length-1) {
+			var length = finalDataArr.length + i;
+			if(length == count-1) {
 				resObj.isLast = true;
 				if(actionName == 'slack') {
 					resObj.slackFlag = true;
@@ -179,7 +180,16 @@ function setOrders(ordersArr, node) {
 			var l = resArr.length;
 			resArr[l] = resObj;
 		}
+		if(resArr.length == 0) {
+			emitter.emit("error", msgPrefix + 'orders found in Magento', "", "", node);
+			return;
+		}
 		post(resArr, node, "");
+		finalDataArr = finalDataArr.concat(resArr);
+		if(finalDataArr.length != count) {
+			page++;
+			getOrders(node);
+		}
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}
