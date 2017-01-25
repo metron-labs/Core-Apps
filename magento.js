@@ -94,23 +94,21 @@ function setOrders(ordersArr, node) {
 		var msgPrefix = 'No ';
 		if(node.optionType.toLowerCase() == 'new') {
 			msgPrefix = 'No new ';
-		}
-		if(ordersArr.length == 0) {
-			emitter.emit("error", msgPrefix + 'orders found in Magento', "", "", node);
-			return;
-		}
+		}		
 		var length = ordersArr.length;
+		var pathStartTime = node.connection.startedAt;
+		var arr = pathStartTime.split('/');
+		var formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
+		var startDate = new Date(formattedDateStr);
 		for(var i = 0; i < ordersArr.length; i++) {
 			resObj = {};
 			obj = ordersArr[i];
-			var pathStartTime = node.connection.startedAt;
-			var arr = pathStartTime.split('/');
-			var formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
-			var startDate = new Date(formattedDateStr);
-			var cDate = new Date(obj.created_at);
-			var cUTCDate = new Date(cDate);
-			if(cUTCDate.getTime() < startDate.getTime()) {
-				continue;
+			if(node.optionType.toLowerCase() == 'new') {
+				var cDate = new Date(obj.created_at);
+				var cUTCDate = new Date(cDate);
+				if(cUTCDate.getTime() < startDate.getTime()) {
+					continue;
+				}
 			}
 			resObj.id = obj.increment_id;
 			resObj.email = obj.customer_email;
@@ -181,6 +179,10 @@ function setOrders(ordersArr, node) {
 			}
 			var l = resArr.length;
 			resArr[l] = resObj;
+		}
+		if(resArr.length == 0) {
+			emitter.emit("error", msgPrefix + 'orders found in Magento', "", "", node);
+			return;
 		}
 		post(resArr, node, "");
 		finalDataArr = finalDataArr.concat(resArr);
