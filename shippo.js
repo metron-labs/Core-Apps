@@ -142,6 +142,7 @@ function formOrder(dataArr, args, node){
 			resObj.shippingAmount = '';
 			resObj.updatedAt = '';
 			resObj.rateId = '';
+			resObj.slackFlag = false;
 			if(actionName == 'slack' && i == 0) {
 				resObj.slackFlag = true;
 			}
@@ -290,6 +291,7 @@ function formTransaction(dataArr, args,node) {
 			resObj.createdAt = obj.object_created;
 			resObj.updatedAt = obj.object_updated;
 			resObj.rateId = obj.rate;
+			resObj.slackFlag = false;
 			if(actionName == 'slack' && i == 0) {
 				resObj.slackFlag = true;
 			}

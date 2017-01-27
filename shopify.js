@@ -301,7 +301,9 @@ function postDataModel(node) {
 		} else if(type == "product" && action == "create") {
 			createProduct(url, node.reqData, node);
 		} else if(type == "product" && action == "update") {
-			getProductId(url, node, 'product');
+			getProductId(url, node.reqData, node, 'product');
+		} else if(type == 'order' && action == 'update') {
+			updateOrder(url, node);
 		}
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
@@ -353,7 +355,7 @@ function createCustomer(url, node, callback) {
 					first_name: name,
 					country:country
 				}],
-				tags: tag,
+				tags : tag,
 				"send_email_welcome": false
 			}
 		};
@@ -515,14 +517,8 @@ function getCustomerId(url, node, callback) {
 	}
 }
 
-function getProductId(url, node, tag, callback) {
-	try {
-		var item;
-		if(tag.toLowerCase() == 'product') {
-			item  = node.reqData;
-		} else {
-			item = node;
-		}
+function getProductId(url, item, node, tag, callback) {
+	try { 
 		var variantId;		
 		var newUrl = url + 'products.json?handle=' + item.name;
 		var args = {
@@ -535,15 +531,15 @@ function getProductId(url, node, tag, callback) {
 					if(status == 2) {
 						var products = data.products;
 						if(products.length == 0) {
-							createProduct(url,item, function(id) {
+							createProduct(url, item, node, function(id) {
 								callback(id);
 							});
 						} else {
 							var variants = products[0].variants[0];
 							variantId = variants.id;
-							if(item.hasOwnProperty('sku') && item.sku != '') {
-								if(variants.sku != item.sku) {
-									updateProduct(url, item, tag, callback);
+							if(tag == 'product') {
+								if(item.hasOwnProperty('sku') && item.sku != '' && variants.sku != item.sku) {
+									updateProduct(url, item, node,  tag, callback);
 								} else {
 									callback(variantId);
 								}
@@ -684,7 +680,7 @@ function getVariantsId(url, node) {
 		var length = items.length;
 		async.forEach(items, function(item) {
 			try {
-				getProductId(url, item, 'order', function(id) {
+				getProductId(url, item, node, 'order', function(id) {
 					item.id = id;
 					length--;
 					if(length == 0) {
@@ -706,7 +702,7 @@ function createOrder(url, node) {
 		var newUrl = url + "orders.json";
 		var items = obj.items;		
 		var lineArr = [];
-		for(var i = 0; i < items.length; i++)		{
+		for(var i = 0; i < items.length; i++) {
 			var lineObj = {};
 			var itemObj = items[i];
 			lineObj.variant_id = itemObj.id;
@@ -758,7 +754,51 @@ function createOrder(url, node) {
 					var status = parseInt(res.statusCode/100);
 					if(status == 2) {
 						var msg = 'Order for the customer with email ' + obj.email + ' has been created successfully in Shopify';
-						post(data, node);
+						post(data, node, msg);
+					} else {
+						errMsg = data.errors;
+						if(data.errors.hasOwnProperty("order")) {
+							errMsg = data.errors.order;
+						}
+						emitter.emit('error', errMsg, data, newUrl, node);
+					}
+				} catch(e) {
+					emitter.emit('error', e.message, e.stack, "", node);
+				}
+			}).on('error', function(err) {
+				emitter.emit('error', errMsg, "", newUrl, node);
+			});
+		}, 5000);
+	} catch(e) {
+		emitter.emit('error', e.message, e.stack, "", node);
+	}
+}
+
+function updateOrder(url, node) {
+	try {
+		var reqObj = node.reqData;
+		var id = reqObj.name;
+		var newUrl = url + 'orders/' + id + '/fulfillments.json';
+		var postData = {
+			fulfillment  : {
+				tracking_number : reqObj.trackingNo
+			}			
+		};
+		var args = {
+			data : postData,
+			headers : {
+				Authorization : "Basic " + b64EncodeUnicode(apiKey + ":" + apiPassword),
+				"Content-Type": 'application/json',
+				Accept : 'application/json'
+			}
+		};
+		setTimeout(function() {
+			client.post(newUrl, args, function(data, res) {
+			try {
+					var status = parseInt(res.statusCode/100);
+					if(status == 2) {
+						var msg = 'Order  with id  ' + id + ' has been updated successfully in Shopify';
+						post(data, node, msg);
 					} else {
 						errMsg = data.errors;
 						if(data.errors.hasOwnProperty("order")) {
@@ -779,7 +819,7 @@ function createOrder(url, node) {
 }
 
 function run(node) {
-	try {
+	try { 
 		var nodeType = node.connector.type;		
 		if(nodeType.toLowerCase() == "action") {
 			postDataModel(node);		
