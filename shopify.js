@@ -777,7 +777,7 @@ function createOrder(url, node) {
 function updateOrder(url, node) {
 	try {
 		var reqObj = node.reqData;
-		var id = reqObj.name;
+		var id = reqObj.orderNo;
 		var newUrl = url + 'orders/' + id + '/fulfillments.json';
 		var postData = {
 			fulfillment  : {
@@ -803,6 +803,12 @@ function updateOrder(url, node) {
 						errMsg = data.errors;
 						if(data.errors.hasOwnProperty("order")) {
 							errMsg = data.errors.order;
+							if(data.errors.order  instanceof Array) {
+								errMsg = 'Order with id ' + id + ' ' + data.errors.order[0];
+							}												
+						}
+						if(errMsg.includes('An error occurred, please try again.')) {
+							errMsg = errMsg + ' - by Shopify';
 						}
 						emitter.emit('error', errMsg, data, newUrl, node);
 					}

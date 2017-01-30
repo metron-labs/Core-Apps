@@ -12,7 +12,7 @@ parcelHeight, parcelWeight, actionName;
 var netQuantity = 0;
 var arrayLength = 0;
 var finalDataArr = [];
-var errMsg = 'Error in connecting Shippo';
+var errMsg = '"Connection timed out" error in Shippo';
 
 function run(node) {
 	try {
@@ -75,7 +75,12 @@ function getStoreData(url, args, type, node) {
 					emitter.emit('error', errMsg, "", url, node);
 				}
 			}	
-		}).on('error', function(err){
+		}).on('error', function(err) {
+			if(err.hasOwnProperty('code')) {
+				if(err.code == 'ETIMEDOUT') {
+					errMsg = '"Connection timed out" error in Shippo';
+				}
+			}
 			emitter.emit('error', errMsg, '', url, node);
 		});
 	} catch(e) {
@@ -84,7 +89,7 @@ function getStoreData(url, args, type, node) {
 
 }
 
-function formOrder(dataArr, args, node){
+function formOrder(dataArr, args, node) {
 	try {
 		var obj,resObj;
 		var resArr = [];
@@ -167,7 +172,7 @@ function getOrderTransactions(resArr, args, node) {
 	try {
 		var obj, resObj,transUrl = '';
 		var length = resArr.length;
-		async.forEach(resArr,function(resObj){
+		async.forEach(resArr,function(resObj) {
 			if(resObj.transactionsId == '') {
 				length--;
 				if(length == 0) {
@@ -196,12 +201,18 @@ function getOrderTransactions(resArr, args, node) {
 							emitter.emit('error', errMsg, "", transUrl, node);
 						}
 					}																
-				}).on('error', function(err){
+				}).on('error', function(err) {
+					if(err.hasOwnProperty('code')) {
+						if(err.code == 'ETIMEDOUT') {
+							errMsg = '"Connection timed out" error in Shippo';
+						}
+					}
 					emitter.emit('error', errMsg, "", transUrl, node);
 				});
-			}}, function(error) {
-				emitter.emit('error', errMsg, '', transUrl, node);
-			});
+			}
+		}, function(error) {
+			emitter.emit('error', errMsg, '', transUrl, node);
+		});
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}			
@@ -210,8 +221,8 @@ function getOrderTransactions(resArr, args, node) {
 function getOrderRates(resArr, args, node) {
 	try {
 		var length = resArr.length;
-		async.forEach(resArr,function(resObj){
-			if(resObj.rateId == ''){
+		async.forEach(resArr,function(resObj) {
+			if(resObj.rateId == '') {
 				length--;
 				if(length == 0) {
 					post(resArr, node, "");
@@ -240,11 +251,17 @@ function getOrderRates(resArr, args, node) {
 						}
 					}					
 				}).on('error', function(err) {
+					if(err.hasOwnProperty('code')) {
+						if(err.code == 'ETIMEDOUT') {
+							errMsg = '"Connection timed out" error in Shippo';
+						}
+					}
 					emitter.emit('error', errMsg, "", rateUrl, node);
 				});
-			}}, function(error){
-				emitter.emit('error', errMsg, '', rateUrl, node);
-			});
+			}
+		}, function(error){
+			emitter.emit('error', errMsg, '', rateUrl, node);
+		});
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
 	}
@@ -310,8 +327,8 @@ function formTransaction(dataArr, args,node) {
 function getTransactionsRate(resArr, args, node) {
 	try {
 		var length = resArr.length;	
-		async.forEach(resArr,function(resObj){
-			if(resObj.rateId == ''){
+		async.forEach(resArr,function(resObj) {
+			if(resObj.rateId == '') {
 				length--;
 				if(length == 0) {
 					getShipment(resArr, args, node);
@@ -338,11 +355,17 @@ function getTransactionsRate(resArr, args, node) {
 						}
 					}
 				}).on('error', function(err) {
+					if(err.hasOwnProperty('code')) {
+						if(err.code == 'ETIMEDOUT') {
+							errMsg = '"Connection timed out" error in Shippo';
+						}
+					}
 					emitter.emit('error', errMsg, "", rateUrl, node);
 				});
-			}}, function(error){
-				emitter.emit('error', errMsg, '', rateUrl, node);
-			});
+			}
+		}, function(error) {
+			emitter.emit('error', errMsg, '', rateUrl, node);
+		});
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}	
@@ -351,8 +374,8 @@ function getTransactionsRate(resArr, args, node) {
 function getShipment(resArr, args, node) {
 	try {
 		var length = resArr.length;	
-		async.forEach(resArr,function(resObj){
-			if(resObj.shipmentId == ''){
+		async.forEach(resArr,function(resObj) {
+			if(resObj.shipmentId == '') {
 				length--;
 				if(length == 0) {
 					getAddress(resArr, args, node);
@@ -385,9 +408,14 @@ function getShipment(resArr, args, node) {
 						}
 					}				
 				}).on('error', function(err) {
+					if(err.hasOwnProperty('code')) {
+						if(err.code == 'ETIMEDOUT') {
+							errMsg = '"Connection timed out" error in Shippo';
+						}
+					}
 					emitter.emit('error', errMsg, "", shipmentUrl, node);
 				});
-			}}, function(error){
+			}}, function(error) {
 				emitter.emit('error', errMsg, '', shipmentUrl, node);
 			});
 	} catch(e) {
@@ -398,8 +426,8 @@ function getShipment(resArr, args, node) {
 function getAddress(resArr, args, node) {
 	try {
 		var length = resArr.length;	
-		async.forEach(resArr,function(resObj){
-			if(resObj.addressId == ''){
+		async.forEach(resArr,function(resObj) {
+			if(resObj.addressId == '') {
 				length--;
 				if(length == 0) {
 					getCustomDeclarations(resArr, args, node);
@@ -440,10 +468,15 @@ function getAddress(resArr, args, node) {
 						}
 					}
 				}).on('error', function(err) {
+					if(err.hasOwnProperty('code')) {
+						if(err.code == 'ETIMEDOUT') {
+							errMsg = '"Connection timed out" error in Shippo';
+						}
+					}
 					emitter.emit('error', errMsg, "", addressUrl, node);
 				});
 			}
-		}, function(error){
+		}, function(error) {
 			emitter.emit('error', errMsg, '', addressUrl, node);
 		});
 	} catch(e) {
@@ -454,7 +487,7 @@ function getAddress(resArr, args, node) {
 function getCustomDeclarations(resArr, args, node) {
 	try {
 		var length = resArr.length;
-		async.forEach(resArr, function(resObj){
+		async.forEach(resArr, function(resObj) {
 			if(resObj.declId == '' || resObj.declId == null) {
 				length--;	
 				resObj.items = [];		
@@ -518,9 +551,14 @@ function getCustomDeclarations(resArr, args, node) {
 									emitter.emit('error', errMsg, "", itemUrl, node);
 								}							
 							}).on('error', function(err) {
+								if(err.hasOwnProperty('code')) {
+									if(err.code == 'ETIMEDOUT') {
+										errMsg = '"Connection timed out" error in Shippo';
+									}
+								}
 								emitter.emit('error', errMsg, "", itemUrl, node);
 							});
-						}, function(error){
+						}, function(error) {
 							emitter.emit('error', error, "", itemUrl, node);
 						});
 					} else {
@@ -534,10 +572,15 @@ function getCustomDeclarations(resArr, args, node) {
 						}
 					}	
 				}).on('error', function(err) {
+					if(err.hasOwnProperty('code')) {
+						if(err.code == 'ETIMEDOUT') {
+							errMsg = '"Connection timed out" error in Shippo';
+						}
+					}
 					emitter.emit('error', errMsg, '', declUrl, node);
 				});
 			}				
-		}, function(error){
+		}, function(error) {
 			emitter.emit('error', errMsg, '', declUrl, node);
 		});
 	} catch(e) {
@@ -670,6 +713,11 @@ function createOrder(url, type, node) {
 				}
 			}
 		}).on('error', function(err) {
+			if(err.hasOwnProperty('code')) {
+				if(err.code == 'ETIMEDOUT') {
+					errMsg = '"Connection timed out" error in Shippo';
+				}
+			}
 			emitter.emit('error', errMsg, args.data, newUrl, node)
 		});
 	} catch(e) {
@@ -723,6 +771,11 @@ function postCustomItem(url, orderObj, node) {
 					}
 				}
 			}).on('error', function(err) {
+				if(err.hasOwnProperty('code')) {
+					if(err.code == 'ETIMEDOUT') {
+						errMsg = '"Connection timed out" error in Shippo';
+					}
+				}
 				emitter.emit('error', errMsg, args.data, newUrl, node);
 			});
 		}, function(error) {
@@ -780,6 +833,11 @@ function postCustomDeclarations(url, orderObj, node) {
 				}
 			}
 		}).on('error', function(err) {
+			if(err.hasOwnProperty('code')) {
+				if(err.code == 'ETIMEDOUT') {
+					errMsg = '"Connection timed out" error in Shippo';
+				}
+			}
 			emitter.emit('error', errMsg, args.data, newUrl, node);
 		});	
 	} catch(e) {
@@ -871,6 +929,11 @@ function postShipment(url, orderObj, transObj, tag, node) {
 				}
 			}
 		}).on('error', function(err) {
+			if(err.hasOwnProperty('code')) {
+				if(err.code == 'ETIMEDOUT') {
+					errMsg = '"Connection timed out" error in Shippo';
+				}
+			}
 			emitter.emit("error", errMsg, args.data, newUrl, node);
 		});
 	} catch(e) {
@@ -937,6 +1000,11 @@ function postTransaction(url, orderObj, shipObj, tag, node) {
 				emitter.emit('error', errMsg, args.data, newUrl, node);
 			}			
 		}).on('error', function(err) {
+			if(err.hasOwnProperty('code')) {
+				if(err.code == 'ETIMEDOUT') {
+					errMsg = '"Connection timed out" error in Shippo';
+				}
+			}
 			emitter.emit('error', errMsg, args.data, newUrl, node);
 		});
 	} catch(e) {
@@ -981,6 +1049,11 @@ function findResult(url, orderObj, transObj, tag, node) {
 				}				
 			}
 		}).on('error', function(err) {
+			if(err.hasOwnProperty('code')) {
+				if(err.code == 'ETIMEDOUT') {
+					errMsg = '"Connection timed out" error in Shippo';
+				}
+			}
 			emitter.emit('error', errMsg, '', newUrl, node);
 		});
 	} catch(e) {
