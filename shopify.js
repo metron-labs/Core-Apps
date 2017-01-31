@@ -154,7 +154,7 @@ function formCustomer(dataArr, node) {
 			}
 			resObj.isLast = false;
 			var length = finalDataArr.length + i;
-			if(length == count) {
+			if(length == count-1) {
 				resObj.isLast = true;
 			}
 			resArr[i] = resObj;
@@ -230,7 +230,7 @@ function formOrder(dataArr, node) {
 			}
 			resObj.isLast = false;
 			var length = finalDataArr.length + i;
-			if(length == count) {
+			if(length == count-1) {
 				resObj.isLast = true;
 			}
 			resObj.items = items;
@@ -271,7 +271,7 @@ function formProduct(dataArr, node) {
 			}
 			resObj.isLast = false;
 			var length = finalDataArr.length + i;
-			if(length == count) {
+			if(length == count-1) {
 				resObj.isLast = true;
 			}
 			resArr[i] = resObj;
