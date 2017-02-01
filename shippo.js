@@ -80,7 +80,7 @@ function formOrder(dataArr, args, node) {
 		var arr = pathStartTime.split('/');
 		var formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
 		var startDate = new Date(formattedDateStr);
-		var msgPrefix = 'No ';
+		var msgPrefix = 'No new';
 		var type = node.option.toLowerCase();
 		for(var i = 0; i < dataArr.length; i++) {
 			resObj = {};
@@ -267,7 +267,7 @@ function getOrderRates(resArr, args, node) {
 					emitter.emit('error', errMsg, "", rateUrl, node);
 				});
 			}
-		}, function(error){
+		}, function(error) {
 			emitter.emit('error', errMsg, '', rateUrl, node);
 		});
 	} catch(e) {
@@ -284,7 +284,7 @@ function formTransaction(dataArr, args,node) {
 		var arr = pathStartTime.split('/');
 		var formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
 		var startDate = new Date(formattedDateStr);
-		var msgPrefix = 'No ';
+		var msgPrefix = 'No new';
 		var type = node.option.toLowerCase();
 		for(var i = 0; i < dataArr.length; i++) {
 			resObj = {};
