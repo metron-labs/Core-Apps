@@ -7,11 +7,9 @@ var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var shippoToken, fromName, fromPhone, fromCompany, fromStreet, fromCity,
 fromState, fromCountryCode, fromZip, parcelLength, parcelWidth,
-parcelHeight, parcelWeight, actionName, pageUrl, dataLength;
+parcelHeight, parcelWeight, actionName, pageUrl;
 
 var netQuantity = 0;
-var arrayLength = 0;
-var finalDataArr = [];
 var errMsg = '"Connection timed out" error in Shippo';
 
 function run(node) {
@@ -43,9 +41,7 @@ function getStoreData(url, node) {
 		client.get(url, args, function(data,res) {
 			var status = parseInt(res.statusCode/100);
 			if(status == 2) {
-				dataLength = data.count;
-				var type = node.option.toLowerCase();				
-				arrayLength += data.results.length;
+				var type = node.option.toLowerCase();
 				pageUrl = data.next;
 				if(type == "order") {
 					formOrder(data.results, args, node);
@@ -85,10 +81,10 @@ function formOrder(dataArr, args, node) {
 		var formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
 		var startDate = new Date(formattedDateStr);
 		var msgPrefix = 'No ';
-		var type = node.option.toLowerCase();			
+		var type = node.option.toLowerCase();
 		for(var i = 0; i < dataArr.length; i++) {
 			resObj = {};
-			obj = dataArr[i];			
+			obj = dataArr[i];
 			var cDate = new Date(obj.created_at);
 			var cUTCDate = new Date(cDate);
 			if(cUTCDate.getTime() < startDate.getTime()) {
@@ -102,7 +98,7 @@ function formOrder(dataArr, args, node) {
 			resObj.price = obj.total_price;
 			resObj.email = obj.address_from.email;
 			var billAddr = {};
-			billAddr.name = obj.address_from.name;		
+			billAddr.name = obj.address_from.name;
 			billAddr.company = obj.address_from.company;
 			billAddr.phone = obj.address_from.phone;
 			billAddr.street = obj.address_from.street1;
@@ -147,16 +143,14 @@ function formOrder(dataArr, args, node) {
 			resObj.updatedAt = '';
 			resObj.rateId = '';
 			resObj.slackFlag = false;
-			if(actionName == 'slack' && i == 0) {
-				resObj.slackFlag = true;
-			}
-			resObj.isLast = false;			
+			resObj.isLast = false;
 			if(obj.hasOwnProperty("transactions") && obj.transactions.length != 0){
 				var transObj;
 				transObj = obj.transactions[0];
 				resObj.transactionsId = transObj.object_id;
+				resObj.status = 'ready';
 			}
-			resArr[i] = resObj;	
+			resArr.push(resObj);
 		} 
 		if(!resArr.length == 0) {
 			getOrderTransactions(resArr, args, node);
@@ -175,38 +169,40 @@ function getOrderTransactions(resArr, args, node) {
 		async.forEach(resArr,function(resObj) {
 			if(resObj.transactionsId == '') {
 				length--;
-				if(length == 1) {
-					resObj.isLast = true;
-				}
 				if(length == 0) {
+					if(actionName == 'slack') {
+						resObj.slackFlag = true;
+					}
+					resObj.isLast = true;
 					getOrderRates(resArr, args, node);
 				}
-			} else {			
+			} else {
 				transUrl = "https://api.goshippo.com/v1/transactions/" + resObj.transactionsId;
 				client.get(transUrl, args, function(data, res) { 
 					var status = parseInt(res.statusCode/100);
+					length--;
 					if(status == 2) {
 						resObj.trackingNo = data.tracking_number;
 						resObj.updatedAt = data.object_updated;
 						var rateId = data.rate;
 						resObj.rateId = rateId;
-						if(length == 1) {
-							resObj.isLast = true;
-						}
-						length--;	
-						if(length == 0) {
-							getOrderRates(resArr, args, node);
-						}						
 					} else {
 						if(status == 5) {
 							emitter.emit('error', 'Server Error in Shippo', '', transUrl, node);
-						} else {					
+						} else {
 							if(data.hasOwnProperty("detail")) {
 								errMsg = data.detail;
 							}
 							emitter.emit('error', errMsg, "", transUrl, node);
 						}
-					}																
+					}
+					if(length == 0) {
+						if(actionName == 'slack') {
+							resObj.slackFlag = true;
+						}
+						resObj.isLast = true;
+						getOrderRates(resArr, args, node);
+					}
 				}).on('error', function(err) {
 					if(err.hasOwnProperty('code')) {
 						if(err.code == 'ETIMEDOUT') {
@@ -221,7 +217,7 @@ function getOrderTransactions(resArr, args, node) {
 		});
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
-	}			
+	}
 }
 
 function getOrderRates(resArr, args, node) {
@@ -236,22 +232,16 @@ function getOrderRates(resArr, args, node) {
 						getStoreData(pageUrl, node);
 					}
 				}
-			} else {			
+			} else {
 				var rateUrl = "https://api.goshippo.com/v1/rates/" + resObj.rateId;
 				client.get(rateUrl, args, function(data, res) {
 					var status = parseInt(res.statusCode/100);
+					length--;
 					if(status == 2) {
 						var amount = data.amount;
 						var margin = amount * 0.15;
 						shippingCost = +amount + +margin;
 						resObj.shippingAmount = shippingCost;
-						length--;
-						if(length == 0) {
-							post(resArr, node, "");
-							if(pageUrl != null) {
-								getStoreData(pageUrl, node);
-							}
-						}
 					} else {
 						if(status == 5) {
 							emitter.emit('error', 'Server Error in Shippo', '', rateUrl, node);
@@ -261,7 +251,13 @@ function getOrderRates(resArr, args, node) {
 							}
 							emitter.emit('error', errMsg, "", rateUrl, node);
 						}
-					}					
+					}
+					if(length == 0) {
+						post(resArr, node, "");
+						if(pageUrl != null) {
+							getStoreData(pageUrl, node);
+						}
+					}
 				}).on('error', function(err) {
 					if(err.hasOwnProperty('code')) {
 						if(err.code == 'ETIMEDOUT') {
@@ -289,8 +285,8 @@ function formTransaction(dataArr, args,node) {
 		var formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
 		var startDate = new Date(formattedDateStr);
 		var msgPrefix = 'No ';
-		var type = node.option.toLowerCase();		
-		for(var i = 0; i < dataArr.length; i++) {		
+		var type = node.option.toLowerCase();
+		for(var i = 0; i < dataArr.length; i++) {
 			resObj = {};
 			obj = dataArr[i];
 			var cDate = new Date(obj.object_created);
@@ -335,11 +331,8 @@ function formTransaction(dataArr, args,node) {
 			resObj.updatedAt = obj.object_updated;
 			resObj.rateId = obj.rate;
 			resObj.slackFlag = false;
-			if(actionName == 'slack' && i == 0) {
-				resObj.slackFlag = true;
-			}
-			resObj.isLast = false;			
-			resArr[i] = resObj;
+			resObj.isLast = false;
+			resArr.push(resObj);
 		}
 		if(!resArr.length == 0) {
 			getTransactionsRate(resArr, args, node);
@@ -357,26 +350,21 @@ function getTransactionsRate(resArr, args, node) {
 		async.forEach(resArr,function(resObj) {
 			if(resObj.rateId == ''){
 				length--;
-				if(length == 1) {
-					resObj.isLast = true;
-				}
 				if(length == 0) {
+					if(actionName == 'slack') {
+						resObj.slackFlag = true;
+					}
+					resObj.isLast = true;
 					getShipment(resArr, args, node);
 				}
-			} else {			
+			} else {
 				var rateUrl = "https://api.goshippo.com/v1/rates/" + resObj.rateId;
 				client.get(rateUrl, args, function(data, res) {
+					length--;
 					var status = parseInt(res.statusCode/100);
 					if(status == 2) {
 						resObj.shippingAmount = data.amount;
 						resObj.shipmentId = data.shipment;
-						if(length == 1) {
-							resObj.isLast = true;
-						}
-						length--;
-						if(length == 0) {
-							getShipment(resArr, args, node);
-						}
 					} else {
 						if(status == 5) {
 							emitter.emit('error','Server Error in Shippo', '', newUrl, node);
@@ -386,6 +374,13 @@ function getTransactionsRate(resArr, args, node) {
 							}
 							emitter.emit('error',errMsg,"",rateUrl, node);
 						}
+					}
+					if(length == 0) {
+						if(actionName == 'slack') {
+							resObj.slackFlag = true;
+						}
+						resObj.isLast = true;
+						getShipment(resArr, args, node);
 					}
 				}).on('error', function(err) {
 					if(err.hasOwnProperty('code')) {
@@ -413,9 +408,10 @@ function getShipment(resArr, args, node) {
 				if(length == 0) {
 					getOrderNumber(resArr, args, node);
 				}
-			} else {			
+			} else {
 				var shipmentUrl = "https://api.goshippo.com/v1/shipments/" + resObj.shipmentId;
 				client.get(shipmentUrl, args, function(data, res) {
+					length--;
 					var status = parseInt(res.statusCode/100);
 					if(status == 2) {
 						if(data.object_status.toUpperCase() == "ERROR" 
@@ -426,10 +422,6 @@ function getShipment(resArr, args, node) {
 						}
 						resObj.declId = data.customs_declaration;
 						resObj.addressId = data.address_to;
-						length--;
-						if(length == 0) {
-							getOrderNumber(resArr, args, node);
-						}
 					} else {
 						if(status == 5) {
 							emitter.emit('error','Server Error in Shippo', '', newUrl, node);
@@ -439,7 +431,10 @@ function getShipment(resArr, args, node) {
 							}
 							emitter.emit('error', errMsg, "", shipmentUrl, node);
 						}
-					}				
+					}
+					if(length == 0) {
+						getOrderNumber(resArr, args, node);
+					}
 				}).on('error', function(err) {
 					if(err.hasOwnProperty('code')) {
 						if(err.code == 'ETIMEDOUT') {
@@ -448,7 +443,8 @@ function getShipment(resArr, args, node) {
 					}
 					emitter.emit('error', errMsg, "", shipmentUrl, node);
 				});
-			}}, function(error) {
+			}
+		}, function(error) {
 				emitter.emit('error', errMsg, '', shipmentUrl, node);
 			});
 	} catch(e) {
@@ -461,14 +457,11 @@ function getOrderNumber(resArr, args, node) {
 		var length = resArr.length;	
 		async.forEach(resArr, function(resObj) { 
 			var orderUrl = "https://api.goshippo.com/v1/orders/" + resObj.orderNo;
-			client.get(orderUrl, args, function(data, res) { 
+			client.get(orderUrl, args, function(data, res) {
 				var status = parseInt(res.statusCode/100);
+				length--;
 				if(status == 2) {
-					resObj.orderNo = data.order_number;					
-					length--;
-					if(length == 0) {
-						getAddress(resArr, args, node);
-					}	
+					resObj.orderNo = data.order_number;
 				} else {
 					if(status == 5) {
 						emitter.emit('error','Server Error in Shippo', '', newUrl, node);
@@ -479,7 +472,10 @@ function getOrderNumber(resArr, args, node) {
 						emitter.emit('error', errMsg, "", orderUrl, node);
 					}
 				}
-			}).on('error', function(err) {			
+				if(length == 0) {
+					getAddress(resArr, args, node);
+				}
+			}).on('error', function(err) {
 				if(err.hasOwnProperty('code')) {
 					if(err.code == 'ETIMEDOUT') {
 						errMsg = '"Connection timed out" error in Shippo';
@@ -504,10 +500,11 @@ function getAddress(resArr, args, node) {
 				if(length == 0) {
 					getCustomDeclarations(resArr, args, node);
 				}
-			} else {			
+			} else {
 				var addressUrl = "https://api.goshippo.com/v1/addresses/" + resObj.addressId;
 				client.get(addressUrl, args, function(data, res) {
 					var status = parseInt(res.statusCode/100);
+					length--;
 					if(status == 2) {
 						if( data.object_state.toUpperCase() == "INVALID" ) {
 							if(resObj.errMsg == '' && data.messages.length > 0) {
@@ -525,10 +522,6 @@ function getAddress(resArr, args, node) {
 						addr.country = data.country;
 						resObj.billingAddress = addr;
 						resObj.shippingAddress = addr;
-						length--;
-						if(length == 0) {
-							getCustomDeclarations(resArr, args, node);
-						}	
 					} else {
 						if(status == 5) {
 							emitter.emit('error','Server Error in Shippo', '', newUrl, node);
@@ -538,6 +531,9 @@ function getAddress(resArr, args, node) {
 							}
 							emitter.emit('error', errMsg, "", addressUrl, node);
 						}
+					}
+					if(length == 0) {
+						getCustomDeclarations(resArr, args, node);
 					}
 				}).on('error', function(err) {
 					if(err.hasOwnProperty('code')) {
@@ -580,13 +576,13 @@ function getCustomDeclarations(resArr, args, node) {
 							}
 						}
 						var items = data.items;
-						var products = [];
-						var i = 0;
+						var products = [];						
 						var itemsLength = items.length;
 						async.forEach(items, function(item) {
 							var itemUrl = "https://api.goshippo.com/v1/customs/items/" + item;
 							client.get(itemUrl, args, function(data1, res1) {
 								var status1 = parseInt(res1.statusCode/100);
+								length--;
 								if(status1 == 2) {
 									if(data.object_state.toUpperCase() == "INVALID" ) {
 										if(resObj.errMsg == '' && data.messages.length > 0) {
@@ -599,8 +595,7 @@ function getCustomDeclarations(resArr, args, node) {
 									prod.quantity = data1.quantity;
 									prod.price = data1.value_amount;
 									resObj.currency = data1.value_currency;
-									products[i] = prod;						
-									i++;
+									products.push(prod);						
 									itemsLength--;
 									if(itemsLength == 0) {
 										resObj.items = products;
@@ -613,21 +608,20 @@ function getCustomDeclarations(resArr, args, node) {
 											price += obj.price * obj.quantity;
 										}
 										resObj.price = price;
-										resObj.quantity = quantity;
-										length--;
-									}							
-									if(length == 0) {
-										post(resArr, node, "");
-										if(pageUrl != null) {
-											getStoreData(pageUrl, node);
-										}
-									}
+										resObj.quantity = quantity;										
+									}									
 								} else {
 									if(data.hasOwnProperty("detail")) {
 										errMsg = data.detail;
 									}
 									emitter.emit('error', errMsg, "", itemUrl, node);
-								}							
+								}
+								if(length == 0) {
+									post(resArr, node, "");
+									if(pageUrl != null) {
+										getStoreData(pageUrl, node);
+									}
+								}						
 							}).on('error', function(err) {
 								if(err.hasOwnProperty('code')) {
 									if(err.code == 'ETIMEDOUT') {
