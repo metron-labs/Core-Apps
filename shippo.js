@@ -80,7 +80,10 @@ function formOrder(dataArr, args, node) {
 		var arr = pathStartTime.split('/');
 		var formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
 		var startDate = new Date(formattedDateStr);
-		var msgPrefix = 'No new';
+		var msgPrefix = 'No ';
+		if(node.optionType.toLowerCase() == 'new') {
+			msgPrefix = 'No new '
+		}
 		var type = node.option.toLowerCase();
 		for(var i = 0; i < dataArr.length; i++) {
 			resObj = {};
@@ -284,7 +287,10 @@ function formTransaction(dataArr, args,node) {
 		var arr = pathStartTime.split('/');
 		var formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
 		var startDate = new Date(formattedDateStr);
-		var msgPrefix = 'No new';
+		var msgPrefix = 'No ';
+		if(node.optionType.toLowerCase() == 'new') {
+			msgPrefix = 'No new '
+		}
 		var type = node.option.toLowerCase();
 		for(var i = 0; i < dataArr.length; i++) {
 			resObj = {};
@@ -445,8 +451,8 @@ function getShipment(resArr, args, node) {
 				});
 			}
 		}, function(error) {
-				emitter.emit('error', errMsg, '', shipmentUrl, node);
-			});
+			emitter.emit('error', errMsg, '', shipmentUrl, node);
+		});
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}	
