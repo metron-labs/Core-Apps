@@ -492,7 +492,7 @@ function createContact(obj, node) {
 		if(obj.hasOwnProperty('linkedinFollowers')) {
 			postData.Linkedin_Followers__c = obj.linkedinFollowers;
 		}
-		if(obj.hasOwnProperty('linkedinFollowiing')) {
+		if(obj.hasOwnProperty('linkedinFollowing')) {
 			postData.Linkedin_Following__c = obj.linkedinFollowing;
 		}
 		if(obj.hasOwnProperty('googleFollowers')) {
