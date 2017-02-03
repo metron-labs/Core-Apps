@@ -40,10 +40,10 @@ function enrichData(data, node) {
 		}
 		if(reqObj.hasOwnProperty('shippingAddress')) {
 			reqObj.type = 'order';
-			reqObj.TwitterFollowers = tCount;
+			reqObj.twitterFollowers = tCount;
 		} else {
 			reqObj.type = 'customer';
-			reqObj.TwitterFollowers = tCount;
+			reqObj.twitterFollowers = tCount;
 			reqObj.Title = title;
 		}
 		var message = 'Person with email id ' + reqObj.email + ' had found in Clearbit';
