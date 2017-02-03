@@ -477,8 +477,36 @@ function createContact(obj, node) {
 			MailingState : state,
 			MailingCountry : country,
 			MailingPostalCode : zip,
+			Company__c : company,
 			Type__c : "Customer"
-		};		
+		};
+		if(obj.hasOwnProperty('twitterFollowers')) {
+			postData.Twitter_Followers__c = obj.twitterFollowers;
+		}
+		if(obj.hasOwnProperty('gitHubFollowers')) {
+			postData.Github_Followers__c = obj.gitHubFollowers;
+		}
+		if(obj.hasOwnProperty('gitHubFollowing')) {
+			postData.Github_Following__c = obj.gitHubFollowing;
+		}
+		if(obj.hasOwnProperty('linkedinFollowers')) {
+			postData.Linkedin_Followers__c = obj.linkedinFollowers;
+		}
+		if(obj.hasOwnProperty('linkedinFollowiing')) {
+			postData.Linkedin_Following__c = obj.linkedinFollowing;
+		}
+		if(obj.hasOwnProperty('googleFollowers')) {
+			postData.Google_Followers__c = obj.googleFollowers;
+		}
+		if(obj.hasOwnProperty('seniority')) {
+			postData.Seniority__c = obj.seniority;
+		}
+		if(obj.hasOwnProperty('designation')) {
+			postData.Designation__c = obj.designation;
+		}
+		if(obj.hasOwnProperty('title') && obj.title != null && obj.title != '') {
+			postData.Title = obj.title;
+		}			
 		var postArgs = {
 			data : postData,
 			headers : { 
