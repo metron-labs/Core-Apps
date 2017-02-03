@@ -9,7 +9,7 @@ function enrichData(data, node) {
 	try { 
 		var reqObj = node.reqData;
 		var customObj = {};
-		var tFollowers = 0, gFollowers = 0, gfollowing = 0, googleFollowers = 0, linkedinFollowers =0, linkedinFollowing = 0;
+		var tFollowers = 0, gFollowers = 0, gFollowing = 0, googleFollowers = 0, linkedinFollowers =0, linkedinFollowing = 0;
 		var dataObj;
 		var title = "" ;
 		if(data.hasOwnProperty("socialProfiles")) {
