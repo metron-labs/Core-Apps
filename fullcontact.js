@@ -9,43 +9,44 @@ function enrichData(data, node) {
 	try { 
 		var reqObj = node.reqData;
 		var customObj = {};
-		var tFollowers ="", gFollowers = "", gfollowing = "", tCount = 0, 
-		gFollowersCount = 0, gfollowingCount = 0,dataObj;
-		var name ="", role = "", seniority = "", title = 0 ;
+		var tFollowers = 0, gFollowers = 0, gfollowing = 0, googleFollowers = 0, linkedinFollowers =0, linkedinFollowing = 0;
+		var dataObj;
+		var title = "" ;
 		if(data.hasOwnProperty("socialProfiles")) {
 			dataObj = data.socialProfiles;
 			for(var i=0; i<dataObj.length; i++) {
 				var checkobj = dataObj[i];
 				if(checkobj.typeName == "Twitter") {
 					tFollowers = checkobj.followers;
-					if(tFollowers !=null || tFollowers !="" ){
-						tCount = tFollowers;
-					}
 				}else if(checkobj.typeName == "github") {
 					gFollowers = checkobj.followers;
-					gfollowing = checkobj.following
+					gFollowing = checkobj.following;
+				}else if(checkobj.typeName == "GooglePlus") {
+					googleFollowers = checkobj.followers;
+				}else if(checkobj.typeName == "LinkedIn") {
+					linkedinFollowers = checkobj.followers;
+					linkedinFollowing = checkobj.following;
 				}
 			}
-		}else{
-			 dataObj = data.organizations;
-			for(var i=0; i<dataObj.length; i++) {
-				var checkobj = dataObj[i];
-				if(checkobj.title == "Twitter") {
-					name =checkobj.name;
-					role = checkobj.role;
-					seniority = checkobj.seniority;
-					title = checkobj.title;
-				}
-			}
+		}
+		if (data.hasOwnProperty("organizations")){
+			dataObj = data.organizations[0];
+			title = dataObj.title;
 		}
 		if(reqObj.hasOwnProperty('shippingAddress')) {
 			reqObj.type = 'order';
-			reqObj.twitterFollowers = tCount;
 		} else {
 			reqObj.type = 'customer';
-			reqObj.twitterFollowers = tCount;
-			reqObj.Title = title;
 		}
+		
+		reqObj.twitterFollowers = tFollowers;
+		reqObj.title = title;
+		reqObj.githubFollowers = gFollowers;
+		reqObj.githubFollowing = gFollowing;
+		reqObj.googleFollowers = googleFollowers;
+		reqObj.linkedinFollowers = linkedinFollowers;
+		reqObj.linkedinFollowing = linkedinFollowing;
+		
 		var message = 'Person with email id ' + reqObj.email + ' had found in Clearbit';
 		node.dataObj = reqObj;
 		emitter.emit("save-to-core", node, message);
@@ -58,7 +59,6 @@ function post(resArr, node, message) {
 	node.resData = resArr;
 	emitter.emit("success", node, message);
 }
-
 
 function findFullContact(node) {
 	try {
