@@ -25,7 +25,7 @@ function run(node) {
 				if(status == 2) {
 					accessToken = data.accessToken;
 					if(type == 'file') {						
-						sendFile(node);									 	 
+						sendFile(node);
 					} else {
 						sendMail(node);
 					}

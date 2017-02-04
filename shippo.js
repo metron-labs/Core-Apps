@@ -1048,6 +1048,10 @@ function postTransaction(url, orderObj, shipObj, tag, node) {
 			}
 		}
 		if(rate == '') {
+			if(rates.length == 0) {
+				emitter.emit('error', 'No rates have been found for the order ' + orderObj.order_number, shipObj, newUrl, node);
+				return;
+			}
 			rate = rates[0].object_id;
 		}
 		postData = {

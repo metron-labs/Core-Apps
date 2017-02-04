@@ -41,7 +41,9 @@ function getDataCount(node) {
 			try {
 				var status = parseInt(res.statusCode/100);
 				if(status == 2) {
-					count = data.count;
+					if(page == 1) {
+						count = data.count;
+					}					
 					var dataUrl;
 					if(type == "customer") {
 						dataUrl = url + "customers.json?page=" + page + '&limit=10';
@@ -184,8 +186,14 @@ function formOrder(dataArr, node) {
 			resObj.price = obj.total_price;
 			resObj.status = obj.financial_status;
 			resObj.name = obj.name;
-			resObj.customerId = obj.customer.id;
-			resObj.customerName = obj.customer.first_name + ' ' + obj.customer.last_name;
+			if(obj.hasOwnProperty('customer')) {
+				resObj.customerId = obj.customer.id;
+				resObj.customerName = obj.customer.first_name + ' ' + obj.customer.last_name;
+			} else {
+				count--;
+				emitter.emit('error', 'Order ' + obj.name + ' does not have customer', '', '', node);
+				continue;
+			}		
 			var billingAddress = {}
 			billingAddress.name = obj.billing_address.name;
 			billingAddress.street = obj.billing_address.address1;
@@ -229,13 +237,13 @@ function formOrder(dataArr, node) {
 				resObj.slackFlag = true;
 			}
 			resObj.isLast = false;
-			var length = finalDataArr.length + i;
+			var length = finalDataArr.length + resArr.length;
 			if(length == count-1) {
 				resObj.isLast = true;
 			}
 			resObj.items = items;
 			resObj.quantity = quantity;
-			resArr[i] = resObj;
+			resArr.push(resObj);
 		}
 		post(resArr, node,"");
 		finalDataArr = finalDataArr.concat(resArr);
@@ -427,19 +435,19 @@ function updateCustomer(url, node) {
 		if(obj.hasOwnProperty('lastName')) {
 			lastName = obj.lastName;
 		}
-		getCustomerId(url, node, function(customerId, addressId) {		
-			var newUrl = url + 'customers/' + customerId + '/addresses/' + addressId +'.json';
-			var postData = {				
-				address : {
-					id : addressId,
+		getCustomerId(url, node, function(customerId) {		
+			var newUrl = url + 'customers/' + customerId + '/addresses.json';
+			var postData = {	
+				address : {	
 					last_name : lastName,
 					first_name: name,
 					address1 : street,
 					city : city,
 					province : state,
 					phone : phone,
-					zip : zip,		        		
-					country:country					
+					zip : zip,
+					country: country,
+					default : true
 				}
 			};			
 			var args = {
@@ -451,7 +459,7 @@ function updateCustomer(url, node) {
 				}
 			};
 			setTimeout(function() {
-				client.put(newUrl, args, function(data, res) {
+				client.post(newUrl, args, function(data, res) {
 					try {
 						var status = parseInt(res.statusCode/100);
 						if(status == 2) {
@@ -462,7 +470,10 @@ function updateCustomer(url, node) {
 								errMsg = data.errors;						
 								if(data.errors.hasOwnProperty("customer_address")) {
 									errMsg = data.errors.customer_address;
-								}			
+								}
+								if(data.errors.hasOwnProperty("signature")) {
+									errMsg = ' The given address ' + data.errors.signature + ' for the cusotmer with email address ' + obj.email;
+								}		
 							}					
 							emitter.emit('error', errMsg, data, newUrl, node);
 						}
@@ -494,11 +505,9 @@ function getCustomerId(url, node, callback) {
 					if(status == 2) {
 						var customers = data.customers;
 						if(customers.length == 0) {
-							createCustomer(url,node, function(id) {
-								callback(id);
-							});
-						} else {						
-							var customerId = customers[0].id;		
+							createCustomer(url, node);
+						} else {
+							var customerId = customers[0].id;							
 							callback(customerId);
 						}
 					} else {
