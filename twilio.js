@@ -4,7 +4,7 @@ var client = new Client();
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var accountSid, authToken, baseUrl, fromPhone, textMessage;
-var errMsg = 'Error in connecting Twilio';
+var errMsg = '"Connection timeout error" in Twilio';
 
 function run(node) {
     try {

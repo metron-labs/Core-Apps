@@ -4,7 +4,7 @@ var client = new Client();
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var apiKey, listId, baseUrl;
-var errMsg = 'Error in connecting Mailchimp';
+var errMsg = '"Connection timeout error" in Mailchimp';
 
 function run(node) {
     try {
@@ -40,7 +40,7 @@ function run(node) {
                 if (status >= 3) {
                     data = JSON.parse(obj);
                     if (data.hasOwnProperty("errors")) {
-                        errMsg = data.errors[0].message;                         
+                        errMsg = data.errors[0].message;
                     } else {
                         var detail = data.detail;
                         errMsg = detail;
@@ -68,13 +68,13 @@ function run(node) {
 
 function post(res, node, message) {
     node.resData = res;
-    emitter.emit("success",node,message);   
+    emitter.emit("success",node,message);
 }
 
 function testApp(callback) {
-    try {           
+    try {
         var url = baseUrl + "/3.0/lists/" + listId + "/members";
-        var args = {      
+        var args = {
             headers : {
                 "Authorization" : "apikey " + apiKey,
                 "Accept" : "application/json",
@@ -95,12 +95,12 @@ function testApp(callback) {
                         errMsg = result.errors[0].message;
                     } else {
                         var detail = result.detail;
-                        errMsg = detail;                              
+                        errMsg = detail;
                     } 
                     result = {
                         status :'error',
                         response : errMsg
-                    };            
+                    };
                 }   
                 callback(result);
                 return result;

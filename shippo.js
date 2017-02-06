@@ -7,7 +7,7 @@ var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var shippoToken, fromName, fromPhone, fromCompany, fromStreet, fromCity,
 fromState, fromCountryCode, fromZip, parcelLength, parcelWidth,
-parcelHeight, parcelWeight, actionName, pageUrl;
+parcelHeight, parcelWeight, actionName, pageUrl, pageCount = 0;
 
 var netQuantity = 0;
 var errMsg = '"Connection timed out" error in Shippo';
@@ -43,6 +43,7 @@ function getStoreData(url, node) {
 			if(status == 2) {
 				var type = node.option.toLowerCase();
 				pageUrl = data.next;
+				pageCount++;
 				if(type == "order") {
 					formOrder(data.results, args, node);
 				} else {
@@ -58,12 +59,7 @@ function getStoreData(url, node) {
 					emitter.emit('error', errMsg, "", url, node);
 				}
 			}	
-		}).on('error', function(err) {
-			if(err.hasOwnProperty('code')) {
-				if(err.code == 'ETIMEDOUT') {
-					errMsg = '"Connection timed out" error in Shippo';
-				}
-			}
+		}).on('error', function(err) {			
 			emitter.emit('error', errMsg, '', url, node);
 		});
 	} catch(e) {
@@ -155,10 +151,12 @@ function formOrder(dataArr, args, node) {
 			}
 			resArr.push(resObj);
 		} 
-		if(!resArr.length == 0) {
+		if(resArr.length > 0) {
 			getOrderTransactions(resArr, args, node);
 		} else {
-			emitter.emit('error', msgPrefix + type + 's found in Shippo', '', '', node);
+			if(pageCount == 1) {
+				emitter.emit('error', msgPrefix + type + 's found in Shippo', '', '', node);
+			}
 		}
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
@@ -340,11 +338,13 @@ function formTransaction(dataArr, args,node) {
 			resObj.isLast = false;
 			resArr.push(resObj);
 		}
-		if(!resArr.length == 0) {
+		if(resArr.length > 0) {
 			getTransactionsRate(resArr, args, node);
 		} else {
-			emitter.emit('error', msgPrefix + type + 's found in Shippo', '', '', node);
-		}		
+			if(pageCount == 1) {
+				emitter.emit('error', msgPrefix + type + 's found in Shippo', '', '', node);
+			}
+		}
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}
@@ -441,12 +441,7 @@ function getShipment(resArr, args, node) {
 					if(length == 0) {
 						getOrderNumber(resArr, args, node);
 					}
-				}).on('error', function(err) {
-					if(err.hasOwnProperty('code')) {
-						if(err.code == 'ETIMEDOUT') {
-							errMsg = '"Connection timed out" error in Shippo';
-						}
-					}
+				}).on('error', function(err) {					
 					emitter.emit('error', errMsg, "", shipmentUrl, node);
 				});
 			}
@@ -455,7 +450,7 @@ function getShipment(resArr, args, node) {
 		});
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
-	}	
+	}
 }
 
 function getOrderNumber(resArr, args, node) {
@@ -489,7 +484,7 @@ function getOrderNumber(resArr, args, node) {
 				}
 				emitter.emit('error', errMsg, "", orderUrl, node);
 			});
-		}, function(error){
+		}, function(error) {
 			emitter.emit('error', errMsg, '', orderUrl, node);
 		});
 	} catch(e) {
@@ -601,7 +596,7 @@ function getCustomDeclarations(resArr, args, node) {
 									prod.quantity = data1.quantity;
 									prod.price = data1.value_amount;
 									resObj.currency = data1.value_currency;
-									products.push(prod);						
+									products.push(prod);
 									itemsLength--;
 									if(itemsLength == 0) {
 										resObj.items = products;
@@ -614,8 +609,8 @@ function getCustomDeclarations(resArr, args, node) {
 											price += obj.price * obj.quantity;
 										}
 										resObj.price = price;
-										resObj.quantity = quantity;										
-									}									
+										resObj.quantity = quantity;
+									}
 								} else {
 									if(data.hasOwnProperty("detail")) {
 										errMsg = data.detail;
@@ -627,7 +622,7 @@ function getCustomDeclarations(resArr, args, node) {
 									if(pageUrl != null) {
 										getStoreData(pageUrl, node);
 									}
-								}						
+								}
 							}).on('error', function(err) {
 								if(err.hasOwnProperty('code')) {
 									if(err.code == 'ETIMEDOUT') {
@@ -657,7 +652,7 @@ function getCustomDeclarations(resArr, args, node) {
 					}
 					emitter.emit('error', errMsg, '', declUrl, node);
 				});
-			}				
+			}
 		}, function(error) {
 			emitter.emit('error', errMsg, '', declUrl, node);
 		});

@@ -5,17 +5,17 @@ var client = new Client();
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var apiToken, agentMailId, subDomain, ticketSubject, ticketComment, actionName;
-var errMsg = 'Error in connecting  Zendesk';
+var errMsg = '"Connection timeout error" in Zendesk';
 
 function run(node) {
 	try {
 		var nodeType = node.connector.type.toLowerCase();
-		var type = node.option.toLowerCase();	
+		var type = node.option.toLowerCase();
 		var url = 'https://' + subDomain + '.zendesk.com/api/v2/';
 		if(type != 'ticket') {
 			type = 'user';
 		}
-		if(nodeType == 'trigger') {			
+		if(nodeType == 'trigger') {
 			getStoreData(url, type, node);
 		} else {
 			postDataModel(url, type, node);
@@ -43,15 +43,15 @@ function getStoreData(url, type, node) {
 			try {
 				var status = parseInt(res.statusCode/100);
 				if(status == 2) {
-					if(type == 'ticket') {						
-						formCustomerFromTicket(data.tickets, node);						
+					if(type == 'ticket') {
+						formCustomerFromTicket(data.tickets, node);
 					} else {
 						formCustomer(data.users, node);
 					}	
 					var nextPage = data.next_page;
 					if(nextPage != null) {
 						getStoreData(nextPage, type, node);
-					}				
+					}
 				} else {
 					if(status == 5) {
 						emitter.emit('error', 'Server Error in Zendesk', '', url, node);
@@ -132,7 +132,7 @@ function formCustomerFromTicket(dataArr, node) {
 			if(actionName == 'slack' && i == 0) {
 				resObj.slackFlag = true;
 			}
-			resArr[i] = resObj;		
+			resArr[i] = resObj;
 		}
 		getUserDetails(resArr, node);
 	} catch(e) {
@@ -187,7 +187,7 @@ function postDataModel(url, type, node) {
 		var option = node.optionType.toLowerCase();
 		if(option == 'update') {
 			updateStoreData(url, type, node);
-		} else {			
+		} else {
 			postTicketOrUser(url, type, option, node);
 		}
 	} catch(e) {
@@ -221,7 +221,7 @@ function getId(url, type, node, callback) {
 				} else {
 					if(status == 5) {
 						emitter.emit('error', 'Server Error in Zendesk', '', newUrl, node);
-					} else {						
+					} else {
 						if(data.hasOwnProperty('description')) {
 							errMsg = data.description;
 						}
@@ -247,7 +247,7 @@ function updateStoreData(url, type, node) {
 		var reqObj = node.reqData;
 		var name, msg;
 		if(reqObj.hasOwnProperty('shippingAddress')) {
-			name = reqObj.shippingAddress.name;			
+			name = reqObj.shippingAddress.name;
 		} else {
 			name = reqObj.firstName;
 		}
@@ -265,7 +265,7 @@ function updateStoreData(url, type, node) {
 			postData = {
 				ticket : {
 					requester : userData,
-					subject : ticketSubject,				
+					subject : ticketSubject,
 					comment : {
 						body :ticketComment
 					}
@@ -323,7 +323,7 @@ function updateStoreData(url, type, node) {
 			}).on('error', function(err) {
 				emitter.emit('error', errMsg, '', url, node);
 			});
-		});		
+		});
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, '', node);
 	}
@@ -336,10 +336,10 @@ function postTicketOrUser(url, type, option, node) {
 			url += 'tickets.json';
 		} else {
 			url += 'users.json';
-		}		
+		}
 		var name, msg;
 		if(reqObj.hasOwnProperty('shippingAddress')) {
-			name = reqObj.shippingAddress.name;			
+			name = reqObj.shippingAddress.name;
 		} else {
 			name = reqObj.firstName;
 		}

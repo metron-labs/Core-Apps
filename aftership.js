@@ -4,7 +4,7 @@ var moment = require('moment-timezone');
 
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 var apiKey;
-var errMsg = 'Error in connecting Aftership';
+var errMsg = '"Connection timeout error" in Aftership';
 
 function run(node) {
 	try {
@@ -36,7 +36,7 @@ function getStoreData(type, node) {
 			var arr = pathStartTime.split('/');
 			var formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
 			var startDate = new Date(formattedDateStr);
-			filterDate = toTimeZone(startDate, "YYYY-MM-DDTHH:mm:ss", "EST");			
+			filterDate = toTimeZone(startDate, "YYYY-MM-DDTHH:mm:ss", "EST");
 		}
 		if(filterDate != null) {
 			url += "?created_at_min=" + filterDate;
@@ -136,7 +136,7 @@ function getOrders(trackingsArr, url, type, node) {
 			if(i == trackingsArr.length-1) {
 				resObj.isLast = true;
 			}
-			resArr[i] = resObj;			
+			resArr[i] = resObj;
 		}
 		post(resArr, node, "");
 	} catch(e) {

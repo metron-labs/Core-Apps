@@ -4,7 +4,7 @@ var client = new Client();
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var tokenSecret, storeId, message, userName;
-var errMsg = 'Error in connecting Slack';
+var errMsg = '"Connection timeout error" in Slack';
 
 function run(node) {
 	try {
@@ -39,7 +39,7 @@ function getStoreData(type, node) {
 								emitter.emit('error', errMsg, data, url, node);
 							}
 						}
-					}					
+					}
 				} else {
 					emitter.emit('error', errMsg, data, url, node);
 				}
@@ -90,18 +90,18 @@ function post(response, node, message) {
 }
 
 function postStoreData(type, node) {
-	try {	
-		var reqObj = node.reqData;	
-		var method = node.option.toLowerCase();		
+	try {
+		var reqObj = node.reqData;
+		var method = node.option.toLowerCase();
 		if(reqObj.email == '' || null) {
 			var msg = method + " does not have email";
 			emitter.emit('error', msg, '', '', node);
 		}
 		if(method == "invite") {
 			postInvite(node, type);
-		} else {			
-			postMessage(type, node);		
-		}		
+		} else {
+			postMessage(type, node);
+		}
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}
@@ -115,7 +115,7 @@ function postInvite(node, type) {
 			try {
 				var status = parseInt(res.statusCode/100);
 				var msg;
-				if(status == 2) {					
+				if(status == 2) {
 					if(data.hasOwnProperty('ok')) {
 						if(data.ok) {
 							msg = "Invite email has been sent successfully to " + reqObj.email + " from Slack"; 
@@ -123,8 +123,8 @@ function postInvite(node, type) {
 						} else {
 							errMsg = data.error;
 							emitter.emit('error', errMsg, data, url, node);
-						}	
-					}	
+						}
+					}
 				} else {
 					emitter.emit('error', errMsg, data, url, node);
 				}
@@ -157,8 +157,8 @@ function postMessage(type, node) {
 							} else {
 								errMsg = data.error;
 								emitter.emit('error', errMsg, data, url, node);
-							}	
-						}					
+							}
+						}
 					} else {
 						emitter.emit('error', errMsg, data, url, node);
 					}
@@ -194,8 +194,8 @@ function testApp(callback) {
 								status : 'error',
 								response : data
 							};
-						}	
-					}			
+						}
+					}
 				} else {
 					result = {
 						status : 'error',

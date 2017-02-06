@@ -3,7 +3,7 @@ var client = new Client();
 
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 var apiKey, apiPassword, siteName, caseSubject, fromEmail, subject, message, actionName;
-var errMsg = 'Error in connecting Desk';
+var errMsg = '"Connection timeout error" in Desk';
 
 function run(node) {
 	try {

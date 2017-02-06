@@ -3,7 +3,7 @@ var client = new Client();
 var emitter = require("../core-integration-server-v2/javascripts/emitter");
 
 var apiKey;
-var errMsg = 'Error in connecting FullContact';
+var errMsg = '"Connection timeout error" in FullContact';
 
 function enrichData(data, node) {
 	try { 
@@ -74,7 +74,7 @@ function findFullContact(node) {
 				try {
 					var status = parseInt(res.statusCode/100);
 					if(status == 2){
-						enrichData(data, node);						
+						enrichData(data, node);
 					} else{
 						if(data.hasOwnProperty('message')) {
 							errMsg = data.message;

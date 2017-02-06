@@ -9,7 +9,7 @@ var emitter = require("../core-integration-server-v2/javascripts/emitter");
 var apiKey,apiPassword,storeName, actionName;
 var page = 1, count, finalDataArr = [];
 
-var errMsg = 'Error in connecting Shopify';
+var errMsg = '"Connection timeout error" in Shopify';
 
 function getDataCount(node) {
 	try {
@@ -32,7 +32,7 @@ function getDataCount(node) {
 			var arr = pathStartTime.split('/');
 			var formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
 			var startDate = new Date(formattedDateStr);
-			filterDate = toTimeZone(startDate, "YYYY-MM-DDTHH:mm:ssZ", "EST");			
+			filterDate = toTimeZone(startDate, "YYYY-MM-DDTHH:mm:ssZ", "EST");
 		}
 		if(filterDate != null) {
 			newUrl += "?created_at_min=" + filterDate;
@@ -43,7 +43,7 @@ function getDataCount(node) {
 				if(status == 2) {
 					if(page == 1) {
 						count = data.count;
-					}					
+					}
 					var dataUrl;
 					if(type == "customer") {
 						dataUrl = url + "customers.json?page=" + page + '&limit=10';
@@ -127,7 +127,7 @@ function toTimeZone(time, format, zone) {
 function formCustomer(dataArr, node) {
 	try {
 		var obj, resObj;
-		var resArr = [];		
+		var resArr = [];
 		for(var i = 0; i < dataArr.length; i++) {
 			resObj = {};
 			obj = dataArr[i];
@@ -136,10 +136,10 @@ function formCustomer(dataArr, node) {
 			resObj.email = obj.email;
 			resObj.createdAt = obj.created_at;
 			resObj.updatedAt = obj.updated_at;
-			resObj.firstName = obj.first_name;	
-			resObj.lastName = obj.last_name;	
+			resObj.firstName = obj.first_name;
+			resObj.lastName = obj.last_name;
 			var addr1 = {};
-			addr1.firstName = obj.default_address.first_name;	
+			addr1.firstName = obj.default_address.first_name;
 			addr1.lastName = obj.default_address.last_name;
 			addr1.street = obj.default_address.address1;
 			addr1.city = obj.default_address.city;
@@ -386,14 +386,14 @@ function createCustomer(url, node, callback) {
 						} else {
 							var msg = 'Customer with email ' + obj.email + ' has been updated successfully in Shopify';
 							post(data, node, msg);
-						}					
+						}
 					} else {
 						if(data.hasOwnProperty("errors")) {
-							errMsg = data.errors;						
+							errMsg = data.errors;
 							if(data.errors.hasOwnProperty("email")) {
 								errMsg = 'Email ' + data.errors.email[0];
-							}			
-						}					
+							}
+						}
 						emitter.emit('error', errMsg, data, url, node);
 					}
 				} catch(e) {
@@ -410,7 +410,7 @@ function createCustomer(url, node, callback) {
 
 function updateCustomer(url, node) {
 	try {
-		var obj = node.reqData;		
+		var obj = node.reqData;
 		var name, street, city, state, country, zip, phone, company;
 		if(obj.hasOwnProperty("shippingAddress")) {
 			name = obj.billingAddress.name;
@@ -435,10 +435,10 @@ function updateCustomer(url, node) {
 		if(obj.hasOwnProperty('lastName')) {
 			lastName = obj.lastName;
 		}
-		getCustomerId(url, node, function(customerId) {		
+		getCustomerId(url, node, function(customerId) {
 			var newUrl = url + 'customers/' + customerId + '/addresses.json';
-			var postData = {	
-				address : {	
+			var postData = {
+				address : {
 					last_name : lastName,
 					first_name: name,
 					address1 : street,
@@ -449,7 +449,7 @@ function updateCustomer(url, node) {
 					country: country,
 					default : true
 				}
-			};			
+			};
 			var args = {
 				data : postData,
 				headers : {
@@ -467,14 +467,14 @@ function updateCustomer(url, node) {
 							post(data, node, msg);
 						} else {
 							if(data.hasOwnProperty("errors")) {
-								errMsg = data.errors;						
+								errMsg = data.errors;
 								if(data.errors.hasOwnProperty("customer_address")) {
 									errMsg = data.errors.customer_address;
 								}
 								if(data.errors.hasOwnProperty("signature")) {
 									errMsg = ' The given address ' + data.errors.signature + ' for the cusotmer with email address ' + obj.email;
-								}		
-							}					
+								}
+							}
 							emitter.emit('error', errMsg, data, newUrl, node);
 						}
 					} catch(e) {
@@ -492,8 +492,8 @@ function updateCustomer(url, node) {
 
 function getCustomerId(url, node, callback) {
 	try {
-		var customer = node.reqData;		
-		var customerId;		
+		var customer = node.reqData;
+		var customerId;
 		var newUrl = url + 'customers/search.json?query=' + customer.email;
 		var args = {
 			headers : { Authorization : 'Basic ' + b64EncodeUnicode(apiKey + ':' + apiPassword)}
@@ -507,7 +507,7 @@ function getCustomerId(url, node, callback) {
 						if(customers.length == 0) {
 							createCustomer(url, node);
 						} else {
-							var customerId = customers[0].id;							
+							var customerId = customers[0].id;
 							callback(customerId);
 						}
 					} else {
@@ -528,7 +528,7 @@ function getCustomerId(url, node, callback) {
 
 function getProductId(url, item, node, tag, callback) {
 	try { 
-		var variantId;		
+		var variantId;
 		var newUrl = url + 'products.json?handle=' + item.name;
 		var args = {
 			headers : { Authorization : 'Basic ' + b64EncodeUnicode(apiKey + ':' + apiPassword)}
@@ -552,7 +552,7 @@ function getProductId(url, item, node, tag, callback) {
 								} else {
 									callback(variantId);
 								}
-							} else {						
+							} else {
 								callback(variantId);
 							}
 						}
@@ -585,7 +585,7 @@ function updateProduct(url, obj, node, tag, callback) {
 				price : obj.price,
 				sku : sku,
 				inventory_quantity : obj.quantity
-			}			
+			}
 		};
 		var args = {
 			data : postData,
@@ -606,10 +606,10 @@ function updateProduct(url, obj, node, tag, callback) {
 						} else {
 							var variants = data.product.variants[0];
 							callback(variants.id);
-						}					
+						}
 					} else {
-						if(data.hasOwnProperty("errors")) {						
-							errMsg = data.errors;					
+						if(data.hasOwnProperty("errors")) {
+							errMsg = data.errors;
 						}
 						emitter.emit('error', errMsg, data, newUrl, node);
 					}
@@ -663,10 +663,10 @@ function createProduct(url, obj, node, callback) {
 						} else {
 							var variants = data.product.variants[0];
 							callback(variants.id);
-						}					
+						}
 					} else {
-						if(data.hasOwnProperty("errors")) {						
-							errMsg = data.errors;					
+						if(data.hasOwnProperty("errors")) {
+							errMsg = data.errors;
 						}
 						emitter.emit('error', errMsg, data, url, node);
 					}
@@ -684,7 +684,7 @@ function createProduct(url, obj, node, callback) {
 
 function getVariantsId(url, node) {
 	try {
-		var obj = node.reqData;		
+		var obj = node.reqData;
 		var items = obj.items;
 		var length = items.length;
 		async.forEach(items, function(item) {
@@ -709,7 +709,7 @@ function createOrder(url, node) {
 	try {
 		var obj = node.reqData;
 		var newUrl = url + "orders.json";
-		var items = obj.items;		
+		var items = obj.items;
 		var lineArr = [];
 		for(var i = 0; i < items.length; i++) {
 			var lineObj = {};
@@ -726,7 +726,7 @@ function createOrder(url, node) {
 					last_name : '-',
 					email : obj.email
 				},
-				email : obj.email,				
+				email : obj.email,
 				billing_address : {
 					first_name : obj.billingAddress.name,
 					last_name: '-',
@@ -791,7 +791,7 @@ function updateOrder(url, node) {
 		var postData = {
 			fulfillment  : {
 				tracking_number : reqObj.trackingNo
-			}			
+			}
 		};
 		var args = {
 			data : postData,
@@ -814,7 +814,7 @@ function updateOrder(url, node) {
 							errMsg = data.errors.order;
 							if(data.errors.order  instanceof Array) {
 								errMsg = 'Order with id ' + id + ' ' + data.errors.order[0];
-							}												
+							}
 						}
 						if(errMsg.includes('An error occurred, please try again.')) {
 							errMsg = errMsg + ' - by Shopify';
@@ -835,15 +835,15 @@ function updateOrder(url, node) {
 
 function run(node) {
 	try { 
-		var nodeType = node.connector.type;		
+		var nodeType = node.connector.type;
 		if(nodeType.toLowerCase() == "action") {
-			postDataModel(node);		
+			postDataModel(node);
 		} else {
-			getDataCount(node);			
+			getDataCount(node);
 		}
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
-	}	 	 	
+	}
 }
 
 function testApp(callback) {
@@ -855,7 +855,7 @@ function testApp(callback) {
 		var result;
 		client.get(url, args, function(data, res) {
 			try {
-				var statusCode = parseInt(res.statusCode/100);    	
+				var statusCode = parseInt(res.statusCode/100);
 				if( statusCode == 2 ){
 					result = {
 						status : 'success',

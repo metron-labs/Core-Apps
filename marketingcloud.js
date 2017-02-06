@@ -5,7 +5,7 @@ var client = new Client();
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var clientId, clientSecret, customerKey, fromName, fromAddress, accessToken, fileUrl;
-var errMsg = 'Error in connecting MarketingCloud';
+var errMsg = '"Connection timeout error" in MarketingCloud';
 
 function run(node) {
 	try {
@@ -24,7 +24,7 @@ function run(node) {
 				var status = parseInt(res.statusCode/100);
 				if(status == 2) {
 					accessToken = data.accessToken;
-					if(type == 'file') {						
+					if(type == 'file') {
 						sendFile(node);
 					} else {
 						sendMail(node);
@@ -200,7 +200,7 @@ function init(node) {
 		fromAddress = credentials.fromAddress;
 		var type = node.option.toLowerCase();
 		if(type == 'file') {
-			fileUrl = credentials.fileUrl;			
+			fileUrl = credentials.fileUrl;
 		}
 		run(node);
 	} catch(e) {

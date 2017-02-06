@@ -7,7 +7,7 @@ var OAuth = require('oauth').OAuth2;
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var sfAccessToken, baseUrl, userName,password, clientId, clientSecret, securityToken, actionName;
-var errMsg = 'Error in connecting SalesForce';
+var errMsg = '"Connection timeout error" in SalesForce';
 
 function run(node) {
 	try {
@@ -44,7 +44,7 @@ function run(node) {
 				}
 			} catch(e) {
 				emitter.emit('error', e.message, e.stack, url, node);
-			}				
+			}
 		}).on('error', function(err) {
 			emitter.emit('error', errMsg,args.data, url, node);
 		});
@@ -114,7 +114,7 @@ function getObjectDetails(dataArr, type, node) {
 							} else {
 								formCustomer(resArr, type, node);
 							}
-						}														
+						}
 					} else {
 						emitter.emit('error', errMsg, "", newUrl, node);
 					}
@@ -126,7 +126,7 @@ function getObjectDetails(dataArr, type, node) {
 			});
 		}, function(error) {
 			emitter.emit('error', errMsg, "", "", node);
-		});			
+		});
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}
@@ -309,7 +309,7 @@ function createLead(obj, node) {
 							}
 						} catch(e) {
 							emitter.emit('error', e.message, e.stack, "", node);
-						}					
+						}
 					}).on('error',function(err1) {
 						emitter.emit('error', errMsg, postArgs.data, newUrl, node);
 					});
@@ -321,7 +321,7 @@ function createLead(obj, node) {
 				}
 			} catch(e) {
 				emitter.emit('error', e.message, e.stack, "", node);
-			}			
+			}
 		}).on('error', function(err) {
 			emitter.emit('error', errMsg, "", url, node);
 		});
@@ -393,7 +393,7 @@ function createAccount(obj, node) {
 				var status = parseInt(res.statusCode/100);
 				if(status == 2) {
 					if(data.hasOwnProperty("totalSize")) {
-						var totalSize = data.totalSize;				
+						var totalSize = data.totalSize;
 						if(totalSize > 0) {
 							var records = data.records;
 							var attributues = records[0];
@@ -427,7 +427,7 @@ function createAccount(obj, node) {
 				}
 			} catch(e) {
 				emitter.emit('error', e.message, e.stack, "", node);
-			}			
+			}
 		}).on('error', function(err) {
 			emitter.emit('error', errMsg, "", url, node);
 		});
@@ -506,7 +506,7 @@ function createContact(obj, node) {
 		}
 		if(obj.hasOwnProperty('title') && obj.title != null && obj.title != '') {
 			postData.Title = obj.title;
-		}			
+		}
 		var postArgs = {
 			data : postData,
 			headers : { 
@@ -596,14 +596,14 @@ function testApp(callback) {
 					result = {
 						status :'error',
 						response: errMsg
-					};			
+					};
 				}	
 				callback(result);
 			} catch(e) {
 				callback({status:"error", response:e.stack});
-			}			
+			}
 		}).on('error', function(err) {
-			callback({status:"error", response:err});		
+			callback({status:"error", response:err});
 		});
 	} catch(e) {
 		callback({status:"error", response:e.stack});

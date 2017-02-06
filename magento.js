@@ -3,7 +3,7 @@ var client = new Client();
 
 var emitter = require('../core-integration-server-v2/javascripts/emitter');;
 var url, userName, password, token;
-var errMsg = "Error in connecting Magento";
+var errMsg = '"Connection timeout error" in Magento';
 var page = 1, count = 0, finalDataArr = [];
 
 function run(node) {
@@ -232,7 +232,7 @@ function testApp(callback) {
 				callback({status : 'error', response : e.stack});
 			}
 		}).on('error', function(err) {
-			callback({status:"error", response:err});	
+			callback({status:"error", response:err});
 		});
 	} catch(e) {
 		callback({status:"error", response:e.stack});

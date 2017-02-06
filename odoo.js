@@ -4,7 +4,7 @@ var async = require('async');
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var userName, password, dbName, url, model, actionName;
-var errMsg = 'Error in connecting Odoo';
+var errMsg = '"Connection timeout error" in Odoo';
 
 function run(node) {
 	try {
@@ -17,7 +17,7 @@ function run(node) {
 			username: userName,
 			password: password
 		});
-		var odoo = new odooApp(opts);		
+		var odoo = new odooApp(opts);
 		if(nodeType == 'trigger') {
 			if(type == "product") {
 				getOdooProducts(odoo, node);
@@ -37,7 +37,7 @@ function getOdooProducts(odoo, node) {
 		model = "product.product";
 		odoo.connect(function (err, res) {
 			try {
-				if (err) { 		
+				if (err) {
 					if(err.hasOwnProperty('data')) {
 						errMsg = err.data.message;
 					}
@@ -117,10 +117,10 @@ function getOdooOrders(odoo, type, node) {
 					}
 					emitter.emit('error', errMsg, '', model, node);
 					return; 
-				}			
+				}
 				var params = {
 					offset: 0
-				};			
+				};
 				odoo.browse_by_id(model, params, function (err, orders) {
 					try {
 						if (err) { 
@@ -128,9 +128,9 @@ function getOdooOrders(odoo, type, node) {
 								errMsg = err.data.message;
 							}
 							emitter.emit('error', errMsg, '', model, node);
-							return;  
+							return;
 						}
-						setOrders(orders, odoo, type, node);												
+						setOrders(orders, odoo, type, node);
 					} catch(e) {
 						emitter.emit('error', e.message, e.stack, '', node);
 					}
@@ -153,7 +153,7 @@ function setOrders(ordersArr, odoo, type, node) {
 			orderType = "REPAIR-ORDER:";
 		} 
 		var obj, resObj;
-		var resArr = [];		
+		var resArr = [];
 		for(var i = 0; i < ordersArr.length; i++) {
 			resObj = {};
 			obj = ordersArr[i];
@@ -168,9 +168,9 @@ function setOrders(ordersArr, odoo, type, node) {
 				resObj.items = obj.order_line[0];
 			} else {
 				resObj.items = obj.operations[0];
-			}			
+			}
 			resObj.price = price;
-			resObj.name = obj.name;			
+			resObj.name = obj.name;
 			resObj.createdAt = obj.create_date;
 			resObj.updatedAt = obj.__last_update;
 			resObj.slackFlag = false;
@@ -256,8 +256,8 @@ function getShippingAddress(ordersArr, odoo, type, node) {
 				} 
 				obj.shippingAddress = shippAddr;
 				length--;
-				if(length == 0) {					
-					getOrderLines(ordersArr, odoo, type, node);					
+				if(length == 0) {
+					getOrderLines(ordersArr, odoo, type, node);
 				}
 			});
 		}, function(error) {
@@ -291,8 +291,8 @@ function getOrderLines(ordersArr, odoo, type, node) {
 					items[i] = item;
 				}
 				obj.items = items;
-				if(length == 0) {					
-					post(ordersArr, node, '');					
+				if(length == 0) {
+					post(ordersArr, node, '');
 				}
 			});
 		}, function(error) {
@@ -373,7 +373,7 @@ function createCustomer(odoo, type, node) {
 
 function createPartner(odoo, type, node, callback) {
 	try {
-		var reqObj = node.reqData;				
+		var reqObj = node.reqData;
 		odoo.connect(function (err, res) {
 			try {
 				if (err) { 
@@ -403,14 +403,14 @@ function createPartner(odoo, type, node, callback) {
 					model = 'res.partner';
 					odoo.create(model, params, function (err, partnerId) {
 						try { 
-							if (err) { 								
+							if (err) {
 								if(err.hasOwnProperty('data')) {
-									errMsg = err.data.arguments[0];								
+									errMsg = err.data.arguments[0];
 								}
 								emitter.emit('error', errMsg, '', model, node);
 								return;  
-							} else {								
-								callback(partnerId);																
+							} else {
+								callback(partnerId);
 							}
 						} catch(e) {
 							emitter.emit('error', e.message, e.stack, '', node);
@@ -452,11 +452,11 @@ function getCountryId(odoo, name, node, callback) {
 					try {
 						if (err) { 
 							if(err.hasOwnProperty('data')) {
-								errMsg = err.data.arguments[0];								
+								errMsg = err.data.arguments[0];
 							}
 							emitter.emit('error', errMsg, '', model, node);
 							return; 
-						} else {							
+						} else {
 							callback(country[0]);
 						}
 					} catch(e) {
@@ -474,7 +474,7 @@ function getCountryId(odoo, name, node, callback) {
 
 function getPartnerId(odoo, type, node, callback) {
 	try {
-		var reqObj = node.reqData;		
+		var reqObj = node.reqData;
 		odoo.connect(function (err, res) {
 			try { 
 				if (err) { 
@@ -485,14 +485,14 @@ function getPartnerId(odoo, type, node, callback) {
 					return; 
 				}
 				var params = {
-					domain : [['email','=', reqObj.email]]					
+					domain : [['email','=', reqObj.email]]
 				}
 				model = 'res.partner';
 				odoo.search(model, params, function (err, partner) {
 					try {
 						if (err) { 
 							if(err.hasOwnProperty('data')) {
-								errMsg = err.data.arguments[0];								
+								errMsg = err.data.arguments[0];
 							}
 							emitter.emit('error', errMsg, '', model, node);
 							return; 
@@ -503,7 +503,7 @@ function getPartnerId(odoo, type, node, callback) {
 								});
 							} else {
 								callback(partner[0]);
-							}							
+							}
 						}
 					} catch(e) {
 						emitter.emit('error', e.message, e.stack, '', node);
@@ -520,7 +520,7 @@ function getPartnerId(odoo, type, node, callback) {
 
 function updatePartner(odoo, type, node, callback) {
 	try {
-		var reqObj = node.reqData;				
+		var reqObj = node.reqData;
 		odoo.connect(function (err, res) {
 			try {
 				if (err) { 
@@ -536,7 +536,7 @@ function updatePartner(odoo, type, node, callback) {
 				} else {
 					addr = reqObj.defaultAddress;
 				}
-				getPartnerId(odoo, type, node, function(partnerId) {				
+				getPartnerId(odoo, type, node, function(partnerId) {
 					getCountryId(odoo, addr.country, node, function(id) {
 						var params = {
 							name  : addr.name,
@@ -550,9 +550,9 @@ function updatePartner(odoo, type, node, callback) {
 						model = 'res.partner';
 						odoo.update(model, partnerId, params, function (err, partner) {
 							try { 
-								if (err) { 									
+								if (err) {
 									if(err.hasOwnProperty('data')) {
-										errMsg = err.data.arguments[0];								
+										errMsg = err.data.arguments[0];
 									}
 									emitter.emit('error', errMsg, '', model, node);
 									return;  
@@ -564,12 +564,12 @@ function updatePartner(odoo, type, node, callback) {
 								emitter.emit('error', e.message, e.stack, '', node);
 							}
 						});
-					});			
+					});
 				});
 			} catch(e) {
 				emitter.emit('error', e.message, e.stack, '', node);
 			}
-		});		
+		});
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, '', node);
 	}
@@ -642,10 +642,10 @@ function createProduct(odoo, obj, type, node, callback) {
 					}
 					emitter.emit('error', errMsg, '', model, node);
 					return;  
-				}								
+				}
 				var params = {
 					name: obj.name,
-					list_price : obj.price                    
+					list_price : obj.price
 				}; 
 				model = 'product.product';
 				odoo.create(model, params, function (err, productId) {
@@ -655,12 +655,12 @@ function createProduct(odoo, obj, type, node, callback) {
 								errMsg = err.data.message;
 							}
 							if(err.hasOwnProperty('data')) {
-								errMsg = err.data.arguments[0];								
+								errMsg = err.data.arguments[0];
 							}
 							emitter.emit('error', errMsg, '', model, node);
 							return;  
-						} else {								
-							callback(productId);																
+						} else {
+							callback(productId);
 						}
 					} catch(e) {
 						emitter.emit('error', e.message, e.stack, '', node);
@@ -677,7 +677,7 @@ function createProduct(odoo, obj, type, node, callback) {
 
 function createSaleOrder(odoo, type, node) {
 	try {
-		var reqObj = node.reqData;				
+		var reqObj = node.reqData;
 		odoo.connect(function (err, res) {
 			try {
 				if (err) { 
@@ -719,10 +719,10 @@ function createSaleOrder(odoo, type, node) {
 
 function createOrderLines(odoo, type, orderId, node) {
 	try {
-		var reqObj = node.reqData;				
+		var reqObj = node.reqData;
 		var itemArr = reqObj.items;
 		var length = itemArr.length;
-		async.forEach(itemArr, function(itemObj) {		
+		async.forEach(itemArr, function(itemObj) {
 			odoo.connect(function (err, res) {
 				try {
 					if (err) { 
@@ -741,7 +741,7 @@ function createOrderLines(odoo, type, orderId, node) {
 							qty_invoiced : itemObj.quantity,
 							qty_to_invoice : itemObj.quantity
 						};	
-						model = 'sale.order.line';				
+						model = 'sale.order.line';
 						odoo.create(model, params, function (err, orders) {
 							try {
 								if (err) { 
@@ -754,13 +754,13 @@ function createOrderLines(odoo, type, orderId, node) {
 									length--;
 									if(length == 0) {
 										updateProducts(odoo, type, orderId, node);
-									}								
+									}
 								}
 							} catch(e) {
 								emitter.emit('error', e.message, e.stack, '', node);
 							}
 						});
-					});					
+					});
 				} catch(e) {
 					emitter.emit('error', e.message, e.stack, '', node);
 				}
@@ -773,10 +773,10 @@ function createOrderLines(odoo, type, orderId, node) {
 
 function updateProducts(odoo, type, orderId, node) {
 	try {
-		var reqObj = node.reqData;				
+		var reqObj = node.reqData;
 		var itemArr = reqObj.items;
 		var length = itemArr.length;
-		async.forEach(itemArr, function(itemObj) {		
+		async.forEach(itemArr, function(itemObj) {
 			odoo.connect(function (err, res) {
 				try {
 					if (err) { 
@@ -791,7 +791,7 @@ function updateProducts(odoo, type, orderId, node) {
 							var	qty = data.qty_available - itemObj.quantity;
 							var params = {
 								ids : productId,
-								qty_available : qty					
+								qty_available : qty
 							};
 							odoo.update('product.product', productId, params, function (err, data) {
 								try {
@@ -806,13 +806,13 @@ function updateProducts(odoo, type, orderId, node) {
 										if(length == 0) {
 											updateOrder(odoo, orderId, node);
 										}
-									}									
+									}
 								} catch(e) {
 									emitter.emit('error', e.message, e.stack, '', node);
 								}
 							});
-						});	
-					});			
+						});
+					});
 				} catch(e) {
 					emitter.emit('error', e.message, e.stack, '', node);
 				}

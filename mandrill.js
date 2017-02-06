@@ -4,7 +4,7 @@ var client = new Client();
  var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var apiKey, fromName, fromAddress, mailSubject, textMessage, sendAt, templateName;
-var errMsg = 'Error in connecting Mandrill';
+var errMsg = '"Connection timeout error" in Mandrill';
 
 function run(node) {
 	try {
@@ -74,7 +74,7 @@ function sendTemplate(url, type, node) {
 					if(data[0].hasOwnProperty("status") && data[0].status.toLowerCase() == "invalid") {
 						errMsg = "Invalid Email. Please provide a valid email";
 						emitter.emit('error', errMsg,args.data, newUrl, node);
-					}		           	
+					}
 		           	post(data, node, msg);
 		        } else {
 		        	if(data.hasOwnProperty("message")) {
@@ -109,7 +109,7 @@ function sendMail(url,  type, node) {
 					email : obj.email,
 					name : fromName
 				}]
-			}			
+			}
 		};
 		if(type == "schedule mail" ) {
 			var date = new Date();
@@ -132,7 +132,7 @@ function sendMail(url,  type, node) {
 					if(data[0].hasOwnProperty("status") && data[0].status.toLowerCase() == "invalid") {
 						errMsg = "Invalid Email. Please provide a valid email";
 						emitter.emit('error', errMsg,args.data, newUrl, node);
-					}					
+					}
 		           	post(data, node, msg);
 		        } else {
 		        	if(data.hasOwnProperty("message")) {
@@ -178,14 +178,14 @@ function testApp(callback) {
 		        	result = {
 		                status :'error',
 		                response: errMsg
-		            };    
+		            };
 		        }
 		        callback(result);
 		    } catch(e) {
 				callback({status:"error", response:e.stack});
-			}    
+			}
 		}).on('error', function(err) {
-			callback({status:"error", response:e.stack});	
+			callback({status:"error", response:e.stack});
 		});
 	} catch(e) {
 		callback({status:"error", response:e.stack});

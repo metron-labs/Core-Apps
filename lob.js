@@ -6,7 +6,7 @@ var emitter = require('../core-integration-server-v2/javascripts/emitter');
 var apiKey, frontFileUrl, backFileUrl, textMessage;
 var offset = 0, count, finalDataArr = [];
 
-var errMsg = 'Error in connecting Lob';
+var errMsg = '"Connection timeout error" in Lob';
 
 function run(node) {
 	try {
@@ -46,7 +46,7 @@ function getPostCards(node) {
 						emitter.emit('error', msgPrefix + 'postcards found in Lob', '', url, node);
 						return;
 					} 
-					formCustomer(data.data, node);										
+					formCustomer(data.data, node);
 				} else {
 					if(data.hasOwnProperty('error')) {
 						errMsg = data.error.message;
@@ -94,7 +94,7 @@ function formCustomer(dataArr, node) {
 			}
 			if(i == count) {
 				resObj.isLast = true;
-			}			
+			}
 			resArr[i] = resObj;
 		}
 		post(resArr, node, '');
@@ -146,9 +146,9 @@ function createPostCard(node) {
 			+ "' height='100' width='100%' style='margin:0px'/></div><div style='position:absolute; width:35%;padding:30px; font-size:14px'>"
 			+ escapeHtml(textMessage) + "</div></html>";
 		}
-		var postData = {			
+		var postData = {
 			to : {
-				name : name,				
+				name : name,
 				address_line1 : street,
 				address_city : city,
 				address_state : state,
@@ -263,7 +263,7 @@ function init(node) {
 		}
 		if(credentials.hasOwnProperty('backFileUrl')) {
 			backFileUrl = credentials.backFileUrl;
-		}		
+		}
 		textMessage = credentials.textMessage;
 		run(node);
 	} catch(e) {

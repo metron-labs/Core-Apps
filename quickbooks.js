@@ -7,7 +7,7 @@ var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var consumerKey, consumerSecret, accessToken, tokenSecret, accountType, companyId, url,
 incomeAccNo, incomeAccName, expenseAccNo, expenseAccName, assetAccNo, assetAccName, actionName;
-var errMsg = 'Error in connecting Quickbooks online';
+var errMsg = '"Connection timeout error" in Quickbooks online';
 
 function run(node) {
 	try {
@@ -62,10 +62,10 @@ function getStoreData(url, type, oauth, node) {
 	}
 }
 
-function formDataModel(data, type, node) {	
+function formDataModel(data, type, node) {
 	try {
-		var res = JSON.parse(data);	
-		var dataArr = [];	
+		var res = JSON.parse(data);
+		var dataArr = [];
 		if(type == "customer") {
 			dataArr = res.QueryResponse.Customer;
 			formCustomer(dataArr, node);
@@ -142,9 +142,9 @@ function formCustomer(dataArr, node) {
 			if(i == dataArr.length-1) {
 				resObj.isLast = true;
 			}
-			resArr[i] = resObj;		
+			resArr[i] = resObj;
 		}
-		post(resArr, node,"");		
+		post(resArr, node,"");
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}
@@ -189,9 +189,9 @@ function formProduct(dataArr, node) {
 			if(i == dataArr.length-1) {
 				resObj.isLast = true;
 			}
-			resArr[i] = resObj;		
+			resArr[i] = resObj;
 		}
-		post(resArr, node);			
+		post(resArr, node);
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}
@@ -316,7 +316,7 @@ function postCustomer(url,  oauth, node, callback) {
 			zip = obj.defaultAddress.zip;
 		}
 		var postData = {
-			DisplayName : name,			
+			DisplayName : name,
 			PrimaryEmailAddr : { Address : obj.email },
 			PrimaryPhone : { FreeFormNumber : phone },
 			BillAddr : { Line1 : street,
@@ -347,7 +347,7 @@ function postCustomer(url,  oauth, node, callback) {
 							customerRef.name = customer.DisplayName;
 							callback(customerRef);
 						}
-					} else {					
+					} else {
 						if(data.hasOwnProperty('Fault')) {
 							if(data.Fault.hasOwnProperty('Error')) {
 								var error = data.Fault.Error[0];
@@ -356,7 +356,7 @@ function postCustomer(url,  oauth, node, callback) {
 									if(error.hasOwnProperty('Detail')) {
 										errMsg += error.Detail;
 									}
-								}							
+								}
 							}
 						}
 						emitter.emit('error', errMsg, data, url, node);
@@ -425,7 +425,7 @@ function postProduct(url, oauth, node, item, callback) {
 									if(error.hasOwnProperty('Detail')) {
 										errMsg += error.Detail;
 									}
-								}							
+								}
 							}
 						}
 						emitter.emit('error', errMsg, data, url, node);
@@ -466,13 +466,13 @@ function postInvoiceOrSalesReceipt(url, type, oauth, node) {
 		var lineArr = [];
 		var newUrl = url + companyId + "/" + type.toLowerCase();
 		var obj = node.reqData;
-		var postData,lineObj;	
+		var postData,lineObj;
 		var items = obj.items;
-		var msgType = type.charAt(0).toUpperCase() + type.substring(1)			
+		var msgType = type.charAt(0).toUpperCase() + type.substring(1);
 		getCustomerId(url, oauth, node, function(cusRef) {
 			for(var j = 0; j < items.length; j++) {
 				lineObj = {};
-				var item = items[j];					
+				var item = items[j];
 				lineObj.Amount =  (item.price * item.quantity );
 				lineObj.DetailType = "SalesItemLineDetail";
 				var salesILD = {};
@@ -514,22 +514,22 @@ function postInvoiceOrSalesReceipt(url, type, oauth, node) {
 										if(error.hasOwnProperty('Detail')) {
 											errMsg += error.Detail;
 										}
-									}							
+									}
 								}
 							}
 							emitter.emit('error', errMsg, data, url, node);
 						}
 					} catch(e) {
 						emitter.emit('error', e.message, e.stack, "", node);
-					}            			
+					}
 				}).on('error',function(err) {
 					emitter.emit('error', errMsg, args.data, newUrl, node);
 				});	
-			}, 8000);				
+			}, 8000);
 		});	
 	} catch(e) {
 		emitter.emit('error',e.message, e.stack, "", node);
-	}				
+	}
 }
 
 function getCustomerId(url, oauth, node, callback) {
@@ -554,7 +554,7 @@ function getCustomerId(url, oauth, node, callback) {
 						} else {
 							postCustomer(url, oauth, node, function(ref) {
 								callback(ref);
-							});				
+							});	
 						}
 					}
 				} catch(e) {
@@ -569,8 +569,8 @@ function getCustomerId(url, oauth, node, callback) {
 
 function getItemId(url, oauth, item, node, callback) {
 	try {
-		var id = '';	
-		var query = "select * from item where Name in ('" + item.name + "')";		
+		var id = '';
+		var query = "select * from item where Name in ('" + item.name + "')";
 		var newUrl = url + companyId + "/query?query= " + encodeURIComponent(query);
 		setTimeout(function() {
 			oauth.get(newUrl, accessToken, tokenSecret, function(err, data, res) {
@@ -582,8 +582,8 @@ function getItemId(url, oauth, item, node, callback) {
 						var queryRes = result.QueryResponse;
 						if(queryRes.hasOwnProperty("Item")) {
 							var product = result.QueryResponse.Item[0];
-							id = product.Id;	
-							callback(id);			
+							id = product.Id;
+							callback(id);
 						} else {
 							postProduct(url, oauth, node, item,function(prodId){
 								id = prodId;
@@ -610,7 +610,7 @@ function testApp(callback) {
 	try {
 		var requestUrl = "https://oauth.intuit.com/oauth/v1/get_request_token";
 		var authorizeUrl = "https://appcenter.intuit.com/Connect/Begin";
-		var result;		
+		var result;
 		if(accountType.toLowerCase() == "sandbox") {
 			url = "https://sandbox-quickbooks.api.intuit.com/v3/company/";
 		} else {
@@ -618,7 +618,7 @@ function testApp(callback) {
 		}
 		oauth = new OAuth(requestUrl, authorizeUrl, consumerKey, consumerSecret, "1.0", null,
 			"HMAC-SHA1", null, { Accept : "application/json"} );
-		var query = "select * from customer";	
+		var query = "select * from customer";
 		url += companyId + "/query?query=" + encodeURIComponent(query);
 		console.log(url);
 		oauth.get(url,accessToken,tokenSecret,function(err,data,res) {
@@ -627,7 +627,7 @@ function testApp(callback) {
 					result = {
 						status : 'error',
 						response : data
-					};				
+					};
 				} else {
 					result = {
 						status : 'success',
