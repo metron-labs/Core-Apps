@@ -149,6 +149,7 @@ function formCustomer(dataArr, node) {
 			addr1.countryISO2 = obj.default_address.country_code;
 			addr1.zip = obj.default_address.zip;
 			addr1.phone = obj.default_address.phone;
+			addr1.company = obj.default_address.company;
 			resObj.defaultAddress = addr1;
 			resObj.slackFlag = false;
 			if(actionName == 'slack' && i == 0) {
@@ -208,6 +209,7 @@ function formOrder(dataArr, node) {
 			billingAddress.countryISO2 = obj.billing_address.countryISO2;
 			billingAddress.zip = obj.billing_address.zip;
 			billingAddress.phone = obj.billing_address.phone;
+			billingAddress.company = obj.billing_address.company;
 			resObj.billingAddress = billingAddress;
 			var shippingAddress = {};
 			shippingAddress.name = obj.shipping_address.name;
@@ -221,6 +223,7 @@ function formOrder(dataArr, node) {
 			shippingAddress.countryISO2 = obj.shipping_address.countryISO2;
 			shippingAddress.zip = obj.shipping_address.zip;
 			shippingAddress.phone = obj.shipping_address.phone;
+			shippingAddress.company = obj.shipping_address.company;
 			resObj.shippingAddress = shippingAddress;
 			resObj.shippingMethod = obj.processing_method;
 			resObj.paymentMethod = obj.processing_method;
