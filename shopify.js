@@ -189,6 +189,8 @@ function formOrder(dataArr, node) {
 			if(obj.hasOwnProperty('customer')) {
 				resObj.customerId = obj.customer.id;
 				resObj.customerName = obj.customer.first_name + ' ' + obj.customer.last_name;
+				resObj.firstName = obj.customer.first_name;
+				resObj.lastName = obj.customer.last_name;
 			} else {
 				count--;
 				emitter.emit('error', 'Order ' + obj.name + ' does not have customer', '', '', node);
@@ -196,6 +198,8 @@ function formOrder(dataArr, node) {
 			}		
 			var billingAddress = {}
 			billingAddress.name = obj.billing_address.name;
+			billingAddress.firstName = obj.billing_address.first_name;
+			billingAddress.lastName = obj.billing_address.last_name;
 			billingAddress.street = obj.billing_address.address1;
 			billingAddress.city = obj.billing_address.city;
 			billingAddress.state = obj.billing_address.province;
@@ -207,6 +211,8 @@ function formOrder(dataArr, node) {
 			resObj.billingAddress = billingAddress;
 			var shippingAddress = {};
 			shippingAddress.name = obj.shipping_address.name;
+			shippingAddress.firstName = obj.shipping_address.first_name;
+			shippingAddress.lastName = obj.shipping_address.last_name;
 			shippingAddress.street = obj.shipping_address.address1;
 			shippingAddress.city = obj.shipping_address.city;
 			shippingAddress.state = obj.shipping_address.province;
@@ -268,7 +274,7 @@ function formProduct(dataArr, node) {
 			resObj.createdAt = obj.created_at;
 			resObj.updatedAt = obj.updated_at;
 			resObj.description = obj.body_html;
-			resObj.catagory = obj.product_type;
+			resObj.category = obj.product_type;
 			var variants = obj.variants[0];
 			resObj.sku = variants.sku;
 			resObj.price = variants.price;
@@ -529,7 +535,9 @@ function getCustomerId(url, node, callback) {
 function getProductId(url, item, node, tag, callback) {
 	try { 
 		var variantId;
-		var newUrl = url + 'products.json?handle=' + item.name;
+		var name = item.name;
+		var str = name.replace(/\s/g,'-').toLowerCase();
+		var newUrl = url + 'products.json?handle=' + str;
 		var args = {
 			headers : { Authorization : 'Basic ' + b64EncodeUnicode(apiKey + ':' + apiPassword)}
 		};
@@ -540,21 +548,17 @@ function getProductId(url, item, node, tag, callback) {
 					if(status == 2) {
 						var products = data.products;
 						if(products.length == 0) {
-							createProduct(url, item, node, function(id) {
+							createProduct(url, item, node, tag, function(id) {
 								callback(id);
 							});
 						} else {
 							var variants = products[0].variants[0];
 							variantId = variants.id;
-							if(tag == 'product') {
-								if(item.hasOwnProperty('sku') && item.sku != '' && variants.sku != item.sku) {
-									updateProduct(url, item, node,  tag, callback);
-								} else {
-									callback(variantId);
-								}
-							} else {
-								callback(variantId);
+							item.id = variantId;
+							if(tag == 'order') {
+								item.quantity = variants.inventory_quantity - item.quantity;
 							}
+							updateProduct(url, item, node, tag, callback);
 						}
 					} else {
 						errMsg = data.errors;
@@ -574,17 +578,21 @@ function getProductId(url, item, node, tag, callback) {
 
 function updateProduct(url, obj, node, tag, callback) {
 	try {
-		var newUrl = url + 'variants/' + obj.id + '.json';
 		var sku = '';
 		if(obj.hasOwnProperty('sku')) {
 			sku = obj.sku;
 		}
+		var qty = obj.quantity;
+		if(obj.hasOwnProperty('qtyOnHand'))	{
+			qty = obj.qtyOnHand;
+		}
+		var newUrl = url + 'variants/' + obj.id + '.json';
 		var postData = {
 			variant : {
 				id : obj.id,
 				price : obj.price,
 				sku : sku,
-				inventory_quantity : obj.quantity
+				inventory_quantity : qty
 			}
 		};
 		var args = {
@@ -604,8 +612,8 @@ function updateProduct(url, obj, node, tag, callback) {
 							var msg = "Product " + obj.name +' has been updated successfully in Shopify';
 							post(data, node, msg);
 						} else {
-							var variants = data.product.variants[0];
-							callback(variants.id);
+							var variant = data.variant;
+							callback(variant.id);
 						}
 					} else {
 						if(data.hasOwnProperty("errors")) {
@@ -625,12 +633,16 @@ function updateProduct(url, obj, node, tag, callback) {
 	}
 }
 
-function createProduct(url, obj, node, callback) {
+function createProduct(url, obj, node, tag, callback) {
 	try {
 		url += "products.json";	
 		var sku = '';
 		if(obj.hasOwnProperty('sku')) {
 			sku = obj.sku;
+		}
+		var qty = obj.quantity;
+		if(obj.hasOwnProperty('qtyOnHand'))	{
+			qty = obj.qtyOnHand;
 		}
 		var postData = {
 			product : {
@@ -640,8 +652,8 @@ function createProduct(url, obj, node, callback) {
 					price : obj.price,
 					sku : sku,
 					inventory_management : "shopify",
-					inventory_quantity : obj.quantity
-				}]			
+					inventory_quantity : qty
+				}]
 			}
 		};
 		var args = {
@@ -661,8 +673,13 @@ function createProduct(url, obj, node, callback) {
 							var msg = "Product " + obj.name +' has been created successfully in Shopify';
 							post(data, node, msg);
 						} else {
-							var variants = data.product.variants[0];
-							callback(variants.id);
+							if(tag == 'product') {
+								var msg = "Product " + obj.name +' has been updated successfully in Shopify';
+								post(data, node, msg);
+							} else {
+								var variants = data.product.variants[0];
+								callback(variants.id);
+							}
 						}
 					} else {
 						if(data.hasOwnProperty("errors")) {
@@ -687,7 +704,7 @@ function getVariantsId(url, node) {
 		var obj = node.reqData;
 		var items = obj.items;
 		var length = items.length;
-		async.forEach(items, function(item) {
+		items.forEach(function(item) {
 			try {
 				getProductId(url, item, node, 'order', function(id) {
 					item.id = id;

@@ -1,4 +1,5 @@
 var Client = require('node-rest-client').Client;
+var usStates = require('../json/us_states');
 var client = new Client();
 
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
@@ -92,7 +93,8 @@ function formCustomer(dataArr, node) {
 			if(actionName == 'slack' && i == 0) {
 				resObj.slackFlag = true;
 			}
-			if(i == count) {
+			resObj.isLast = false;
+			if(i == dataArr.length-1) {
 				resObj.isLast = true;
 			}
 			resArr[i] = resObj;
@@ -106,6 +108,23 @@ function formCustomer(dataArr, node) {
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, '', node);
 	}
+}
+
+String.prototype.findCode = function (s) {
+	var str = this.toLowerCase();
+	s = s.toLowerCase();
+	if (str.indexOf(s) == -1) {
+		return false;
+	}
+	return true;
+};
+
+function getUSProvinceCode(usstate) {
+	for(key in usStates) {
+		if(key.findCode(usstate)) {
+			return usStates[key];
+		}
+	}	
 }
 
 function createPostCard(node) {
@@ -133,12 +152,26 @@ function createPostCard(node) {
 			company = reqObj.defaultAddress.company;
 		}
 		var front, back;
-		if(frontFileUrl == '') {
-			front = reqObj.fileUrl;
-		} else {
+		if(typeof frontFileUrl != 'undefined' ) {
 			front = frontFileUrl;
+		} else {
+			front = reqObj.fileUrl;
 		}
-		if(backFileUrl != '') {
+		if(country.length > 3) {
+			if(country.toLowerCase() == "united states") {
+				country = "US";
+			} else {
+				country = country.substring(0,2).toUpperCase();
+			}			
+		}
+		if (state.length == 2) {
+			state = state;
+		}else if(country == 'US') {
+			state = getUSProvinceCode(state);
+		} else {
+			state = state.substring(0,2).toUpperCase();
+		}
+		if(typeof backFileUrl != 'undefined') {
 			back = backFileUrl;
 		} else {
 			var backUrl = 'http://neemtecsolutions.com/corehq/poster_header.png';
