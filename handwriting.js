@@ -208,9 +208,9 @@ function init(node) {
 		apiToken = credentials.apiToken;
 		tokenSecret = credentials.tokenSecret;
 		handwritingId = credentials.handwritingId;
-		width = credentials.width;
-		height = credentials.height;
-		text = credentials.text;
+		width = credentials.textWidth;
+		height = credentials.textHeight;
+		text = credentials.textMessage;
 		run(node);
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
