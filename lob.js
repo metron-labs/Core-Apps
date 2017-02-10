@@ -1,5 +1,5 @@
 var Client = require('node-rest-client').Client;
-var usStates = require('../json/us_states');
+var usStates = require('./json/us_states');
 var client = new Client();
 
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
