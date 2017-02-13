@@ -84,13 +84,11 @@ function searchClearbit(node) {
 					} catch(e) {
 						emitter.emit('error', e.message, e.stack, url, node);
 					}
-				} catch(e) {
-					emitter.emit('error', e.message, e.stack, url, node);
-				}
-			}).on('error',function(err) {
-				emitter.emit("error", errMsg,err, url, node);
-			});	
-		}, 5000);
+				}).on('error',function(err) {
+					emitter.emit("error", errMsg,err, url, node);
+				});	
+			}, 5000);
+		}
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}
