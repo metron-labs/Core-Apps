@@ -2,6 +2,7 @@ var Client = require('node-rest-client').Client;
 var client = new Client();
 var moment = require('moment-timezone');
 var usStates = require('./json/us_states');
+var writeFile = require('write');
 
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
@@ -17,10 +18,49 @@ function run(node) {
 		var type = node.option.toLowerCase();
 		var action = node.optionType.toLowerCase();
 		if(nodeType == 'trigger') {
-			getOrders(node);
+			if(type == 'shipping label') {
+				getCoreCacheData(node);
+			} else {
+				getOrders(node);
+			}			
 		} else {
 			postStoreData(node);
 		}
+	} catch(e) {
+		emitter.emit('error', e.message, e.stack, "", node);
+	}
+}
+
+function getCoreCacheData(node) {
+	try {
+		actionName = node.connection.actionName.toLowerCase();
+		emitter.emit("get-from-core", node, function(data) {
+			try {
+				var resArr = [];
+				var resObj;
+				for(var i = 0; i < data.length; i++) {
+					resObj = data[i].dataObj;
+					if(resObj.hasOwnProperty('shippingAddress')) {
+						resObj.type = 'order';
+					} else {
+						resObj.type = 'customer';
+					}
+					if(i == data.length-1) {
+						resObj.isLast = true;
+						if(actionName == 'slack') {
+							resObj.slackFlag = true;
+						}
+					}
+					resArr[i] = resObj;
+					if(i == data.length-1) {
+						node.resData = resArr;
+						emitter.emit('success', node, '');
+					}
+				}				
+			} catch(e) {
+				emitter.emit('error', e.message, e.stack, "", node);
+			}
+		});
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}
@@ -185,36 +225,44 @@ function createOrder(node, type, action) {
 		}
 		if(reqObj.shippingAddress.hasOwnProperty('company')) {
 			shippingCompany = reqObj.shippingAddress.company;
-		}
-		
+		}		
 		var items = reqObj.items;
-		var itemsArr = [];
-		
+		var itemsArr = [];		
 		items.forEach(function(item) {
 			var productItems = {};
 			productItems.sku = reqObj.id;
 			productItems.name = item.name;
 			productItems.quantity = item.quantity;
 			netQuantity += item.quantity;
-		    productItems.unitPrice = item.price;
-		    itemsArr.push(productItems);
-        });
-      	var appName = node.connection.triggerName.toLowerCase();
-      	var order_number = appName + reqObj.id;
-        var postData = {
+			productItems.unitPrice = item.price;
+			itemsArr.push(productItems);
+		});
+		var cDate = reqObj.createdAt;
+		var arr = cDate.split('/');
+		var formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
+		var country = reqObj.shippingAddress.country;
+		if(country.length > 3) {
+			if(country.toLowerCase() == "united states") {
+				country = "US";
+			} else {
+				country = country.substring(0,2).toUpperCase();
+			}
+		}
+		var postData = {
 			orderNumber : reqObj.id,
-			orderDate : reqObj.createdAt,
+			orderDate : toTimeZone(new Date(formattedDateStr), "YYYY-MM-DD HH:mm:ss", "EST"),
 			orderStatus : status,
 			customerEmail : reqObj.email,
 			billTo : {
-			  name : reqObj.billingAddress.name,
-			  company : billingCompany,
-			  street1 : reqObj.billingAddress.street,
-			  city : reqObj.billingAddress.city,
-			  state : reqObj.billingAddress.state,
-			  postalCode : reqObj.billingAddress.zip,
-			  country : reqObj.billingAddress.countryCode,
-			  phone : reqObj.billingAddress.phone
+				name : fromName,
+				company : fromCompany,
+				street1 : fromStreet,
+				city : fromCity,
+				state : fromState,
+				postalCode : fromZip,
+				country : fromCountryCode,
+				phone : fromPhone,
+				residential : fromResidential
 			},
 			shipTo : {
 				name : reqObj.shippingAddress.name,
@@ -223,7 +271,7 @@ function createOrder(node, type, action) {
 				city : reqObj.shippingAddress.city,
 				state : reqObj.shippingAddress.state,
 				postalCode : reqObj.shippingAddress.zip,
-				country : reqObj.shippingAddress.countryCode,
+				country : country,
 				phone : reqObj.shippingAddress.phone
 			},
 			advancedOptions : {
@@ -231,7 +279,7 @@ function createOrder(node, type, action) {
 			},
 			shippingAmount : reqObj.shippingAmount ,
 			items:itemsArr
-		}
+		};
 		var args = {
 			data : postData,
 			headers : {
@@ -242,7 +290,6 @@ function createOrder(node, type, action) {
 		};
 		client.post(newUrl, args, function(data, res) {
 			try {
-				console.log(res.statusCode);
 				var statusCode = parseInt(res.statusCode/100);
 				if(statusCode == 2) {
 					if(type == 'order' && action == 'create') {
@@ -257,7 +304,13 @@ function createOrder(node, type, action) {
 					if(data.hasOwnProperty("errors")) {
 						errMsg = data.errors;
 					}
-					emitter.emit('error', errMsg, "", newUrl, node);
+					if(data.hasOwnProperty('Message')) {
+						errMsg = data.Message;
+					}
+					if(data.hasOwnProperty('ExceptionMessage')) {
+						errMsg = data.ExceptionMessage;
+					}
+					emitter.emit('error', errMsg, data, newUrl, node);
 				} 
 			} catch(e) {
 				emitter.emit('error', e.message, "", "", node);
@@ -287,22 +340,22 @@ function updateOrder(node, data) {
 			status = 'cancelled';
 		}
 		var billingAddress = {};
-		billingAddress.name = reqObj.billingAddress.name;
-		billingAddress.street1 = reqObj.billingAddress.street;
-		billingAddress.city = reqObj.billingAddress.city;
-		billingAddress.state = reqObj.billingAddress.state;
-		billingAddress.postalCode = reqObj.billingAddress.zip;
-		billingAddress.country = reqObj.billingAddress.countryCode;
-		billingAddress.phone = reqObj.billingAddress.phone;
-
+		billingAddress.name = fromName;
+		billingAddress.street1 = fromStreet;
+		billingAddress.city = fromCity;
+		billingAddress.state = fromState;
+		billingAddress.postalCode = fromZip;
+		billingAddress.country = fromCountryCode;
+		billingAddress.phone = fromPhone;
+		billingAddress.residential = fromResidential;
 		var shippingAddress = {};
- 		shippingAddress.name = reqObj.shippingAddress.name;
- 		shippingAddress.street1 = reqObj.shippingAddress.street;
- 		shippingAddress.city = reqObj.shippingAddress.city;
+		shippingAddress.name = reqObj.shippingAddress.name;
+		shippingAddress.street1 = reqObj.shippingAddress.street;
+		shippingAddress.city = reqObj.shippingAddress.city;
 		shippingAddress.state = reqObj.shippingAddress.state;
 		shippingAddress.postalCode = reqObj.shippingAddress.zip;
-		shippingAddress.country = 'US';
-        shippingAddress.phone = reqObj.shippingAddress.phone;
+		shippingAddress.country = country,
+		shippingAddress.phone = reqObj.shippingAddress.phone;
 		var items = reqObj.items;
 		var itemsArr = [];
 		items.forEach(function(item) {
@@ -310,10 +363,10 @@ function updateOrder(node, data) {
 			productItems.sku = reqObj.id;
 			productItems.name = item.name;
 			productItems.quantity = item.quantity;
-		    productItems.unitPrice = item.price;
-		    itemsArr.push(productItems);
-        });
-        var postData = {
+			productItems.unitPrice = item.price;
+			itemsArr.push(productItems);
+		});
+		var postData = {
 			orderNumber : reqObj.id,
 			orderKey : reqObj.orderNo,
 			orderDate : reqObj.createdAt,
@@ -325,7 +378,7 @@ function updateOrder(node, data) {
 			},
 			shippingAmount : reqObj.shippingAmount ,
 			items : itemsArr
-		}
+		};
 		var args = {
 			data : postData,
 			headers : {
@@ -344,11 +397,14 @@ function updateOrder(node, data) {
 						if(data.hasOwnProperty("errors")) {
 							errMsg = data.errors;
 						}
-						emitter.emit('error', errMsg, "", newUrl, node);
+						emitter.emit('error', errMsg, data, newUrl, node);
 					}
 				} catch(e) {
 					emitter.emit('error', e.message, "", "", node);
 				}
+			} catch(e) {
+				emitter.emit('error', e.message, "", "", node);
+			}
 		}).on('error', function(err) {
 			emitter.emit("error", errMsg, "", newUrl, node);
 		});
@@ -365,12 +421,13 @@ function createShippingLabel (node, data) {
 		getCarrierCode(node, function(carrierCode) {
 			serviceCode(node, carrierCode, function(serviceCode) {
 				listPackage(node, carrierCode, function(packages) {
+					var cDate = new Date(shipDate);
 					var postData = {
 						carrierCode : carrierCode.code,
 						serviceCode : serviceCode,
 						packageCode : packages,
 						confirmation : data.confirmation,
-						shipDate : shipDate,
+						shipDate : toTimeZone(new Date(cDate), "YYYY-MM-DD", "EST"),
 						weight : {
 							value : netQuantity,
 							units : data.weight.units
@@ -430,9 +487,15 @@ function createShippingLabel (node, data) {
 								convertPdf(data.labelData, res, node);								
 							} else {
 								if(data.hasOwnProperty("errors")) {
-									errMsg = data.errors;	
-								}	
-								emitter.emit('error', errMsg, "", newUrl, node);
+									errMsg = data.errors;
+								}
+								if(data.hasOwnProperty('Message')) {
+									errMsg = data.Message;
+								}
+								if(data.hasOwnProperty('ExceptionMessage')) {
+									errMsg = data.ExceptionMessage;
+								}
+								emitter.emit('error', errMsg, data, newUrl, node);
 							} 
 						} catch(e) {
 							emitter.emit('error', e.message, "", "", node);
@@ -595,22 +658,33 @@ function getUSProvinceCode(usstate) {
 function convertPdf(data, res, node) {
 	try {
 		var reqObj = node.reqData;
-		var imgData =  'data:' + res.headers["content-type"] + ';base64,'+ new Buffer(data);
-		var buf = decodeBase64(imgData);
-		var writeFile = require('write');
-		var ext = imgData.split(';')[0].match(/jpeg|png|gif|pdf/)[0];
+		var pdfData =  'data:application/pdf;base64,'+ new Buffer(data);
+		var buf = decodeBase64(pdfData);
+		var ext = pdfData.split(';')[0].match(/jpeg|png|gif|pdf/)[0];
 		var file = writeFile.stream('./shipstation/label/' + reqObj.id + '.' + ext);
 		file.write(buf.data);
 		file.end();
 		file.on('finish' , function() {
 			var msg = "Shipping label created successfully in Shipstation.";
 			reqObj.id = reqObj.id.toString();
+			reqObj.fileType = res.headers["content-type"];
+			reqObj.fileName = reqObj.id + '.' + ext;
 			reqObj.fileUrl = './shipstation/label/' + reqObj.id + '.' + ext;
 			node.dataObj = reqObj;
 			emitter.emit('save-to-core', node, msg);
 		});
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
+	}
+}
+
+function decodeBase64(dataString) {
+	var matches = dataString.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+	var response = {};
+	if (matches.length == 3) {
+		response.type = matches[1];
+		response.data = new Buffer(matches[2], 'base64');
+		return response;
 	}
 }
 

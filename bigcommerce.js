@@ -6,6 +6,7 @@ var async = require('async');
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
 var url, userName, apiToken, actionName, finalDataArr = [], page = 1, count;
+var  filterDate= null, msgPrefix = 'No ';
 var errMsg = '"Connection time out error" in Bigcommerce';
 
 function run(node) {
@@ -13,7 +14,11 @@ function run(node) {
 		var nodeType =  node.connector.type.toLowerCase();
 		var type = node.option.toLowerCase();
 		var reqObj = node.reqData;
-		getDataCount(node);
+		if(nodeType == 'trigger') {
+			getDataCount(node);
+		} else {  
+			postStoreData(node);
+		}
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, "", node);
 	}
@@ -37,6 +42,16 @@ function getDataCount (node) {
 			newUrl = url + "/products/count.json";
 		} else if(type == "order") {
 			newUrl = url + "/orders/count.json";
+		}
+		if(node.optionType.toLowerCase() == 'new') {
+			var pathStartTime = node.connection.startedAt;
+			var arr = pathStartTime.split('/');
+			var formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
+			var startDate = new Date(formattedDateStr);
+			filterDate = toTimeZone(startDate, "YYYY-MM-DDTHH:mm:ss", "UTC");			
+		}
+		if(filterDate != null) {
+			newUrl += "?min_date_created=" + filterDate;
 		}
 		client.get(newUrl, args, function(data, res) {
 			try {
@@ -68,27 +83,16 @@ function getStoreData(dataUrl, args, type, node) {
 	try {
 		actionName = node.connection.actionName.toLowerCase();
 		var type =  node.option.toLowerCase();
-		var newUrl = dataUrl, filterDate = null;
-		if(node.optionType.toLowerCase() == 'new') {
-			var pathStartTime = node.connection.startedAt;
-			var arr = pathStartTime.split('/');
-			var formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
-			var startDate = new Date(formattedDateStr);
-			filterDate = toTimeZone(startDate, "YYYY-MM-DDTHH:mm:ss", "EST");
-		}
 		if(filterDate != null) {
-			newUrl += "&min_date_created=" + filterDate;
+			dataUrl += "&min_date_created=" + filterDate;
+			msgPrefix = 'No new ';
 		}
-		client.get(newUrl, args, function(data, res) {
+		client.get(dataUrl, args, function(data, res) {
 			try {
 				var statusCode = parseInt(res.statusCode/100);
-				var msgPrefix = 'No ';
-				if(node.optionType.toLowerCase() == 'new') {
-					msgPrefix = 'No new ';
-				}
 				if(statusCode == 2) {
 					if(res.statusCode == 204) {
-						emitter.emit('error', msgPrefix + type + 's found in Bigcommerce', '', newUrl, node);
+						emitter.emit('error', msgPrefix + type + 's found in Bigcommerce', '', dataUrl, node);
 					} else {
 						if (type == "customer") {
 							setCustomer(data, node);
@@ -100,7 +104,8 @@ function getStoreData(dataUrl, args, type, node) {
 					}
 				} else {
 					if(statusCode == 5) {
-						emitter.emit('error', 'Server Error in Bigcommerce', '', newUrl, node);
+						emitter.emit('error', 'Server Error in Bigcommerce', '', dataUrl, node);
+						return;
 					}
 					if(data[0].hasOwnProperty('message')) {
 						errMsg = data[0].message;
@@ -110,13 +115,13 @@ function getStoreData(dataUrl, args, type, node) {
 							errMsg += ' ' + data[0].details.invalid_reason;
 						}
 					}
-					emitter.emit('error', errMsg,"", newUrl, node);
+					emitter.emit('error', errMsg,"", dataUrl, node);
 				} 
 			} catch(e) {
-				emitter.emit('error', e.message, "", newUrl, node);
+				emitter.emit('error', e.message, "", dataUrl, node);
 			}
 		}).on('error', function(err) {
-			emitter.emit("error", errMsg, "", newUrl, node);
+			emitter.emit("error", errMsg, "", dataUrl, node);
 		});
 	} catch(e) {
 		emitter.emit('error', e.message, "", "", node);
@@ -130,7 +135,8 @@ function toTimeZone(time, format, zone) {
 function setCustomer(dataArr, node) {
 	try {
 		var obj, resObj;
-		var resArr = [];
+		var resArr = [];	
+		var length = dataArr.length;		
 		for(var i = 0; i < dataArr.length; i++) {
 			resObj = {};
 			obj = dataArr[i];
@@ -150,9 +156,15 @@ function setCustomer(dataArr, node) {
 			if(length == count-1) {
 				resObj.isLast = true;
 			}
-			resArr[i] = resObj;	
+			resArr[i] = resObj;
+			if (i == dataArr.length-1) {
+				if(resArr.length > 0) {
+					getAddress(resArr, node);
+				} else {
+					emitter.emit('error', msgPrefix  + 'customers found in Bigcommerce', '', '', node);
+				}
+			}
 		}
-		getAddress(resArr, node);
 	} catch(e) {
 		emitter.emit('error', e.message, "", "", node);
 	}
@@ -224,7 +236,7 @@ function getAddress(resArr, node) {
 		});
 	} catch(e) {
 		emitter.emit('error', e.message, "", "", node);
-	}	
+	}
 }
 
 function setProduct(dataArr, node) {
@@ -257,7 +269,11 @@ function setProduct(dataArr, node) {
 			}
 			resArr[i] = resObj;
 		}
-		post(resArr, node, "");
+		if(resArr.length > 0) {
+			post(resArr, node, "");
+		} else {
+			emitter.emit('error', msgPrefix + 'products found in Bigcommerce', '', '', node);
+		}		
 		finalDataArr = finalDataArr.concat(resArr);
 		if(finalDataArr.length != count) {
 			page++;
@@ -309,7 +325,11 @@ function setOrder(dataArr, node) {
 			}
 			resArr[i] = resObj;	
 		}
-		getShippingAddress(resArr, node)
+		if(resArr.length > 0) {
+			getShippingAddress(resArr, node)
+		} else {
+			emitter.emit('error', msgPrefix  + 'orders found in Bigcommerce', '', '', node);
+		}		
 	} catch(e) {
 		emitter.emit('error', e.message, "", "", node);
 	}
@@ -331,6 +351,7 @@ function getShippingAddress(orders, node) {
 				client.get(addressUrl, args, function(data, res) {
 					try {
 						var statusCode = parseInt(res.statusCode/100);
+						length--;
 						if(statusCode == 2) {
 							var address={};
 							address.name = data[0].first_name+' '+data[0].last_name;
@@ -343,11 +364,7 @@ function getShippingAddress(orders, node) {
 							address.phone = data[0].phone;
 							address.company = data[0].company;
 							order.shippingAddress = address;
-							order.shippingMethod = data[0].shipping_method
-							length--;
-							if(length == 0) {
-								getProducts(orders, node);
-							}
+							order.shippingMethod = data[0].shipping_method;
 						} else {
 							if(statusCode == 5) {
 								emitter.emit('error', 'Server Error in Bigcommerce', '', addressUrl, node);
@@ -362,6 +379,9 @@ function getShippingAddress(orders, node) {
 							}
 							emitter.emit('error', errMsg, "", addressUrl, node);
 						} 
+						if(length == 0) {
+							getProducts(orders, node);
+						}
 					} catch(e) {
 						emitter.emit('error', e.message, "", addressUrl, node);
 					}
@@ -393,6 +413,7 @@ function getProducts(orders, node) {
 				client.get(productUrl, args, function(data, res) {
 					try {
 						var statusCode = parseInt(res.statusCode/100);
+						length--;
 						if(statusCode == 2) {
 							var products = [];
 							for(var i = 0; i < data.length; i++) {
@@ -408,10 +429,6 @@ function getProducts(orders, node) {
 								products.push(obj);
 							}
 							order.items = products;
-							length--;
-							if(length == 0) {
-								post(orders, node, "");
-							}
 						} else {
 							if(statusCode == 5) {
 								emitter.emit('error', 'Server Error in Bigcommerce', '', productUrl, node);
@@ -425,7 +442,10 @@ function getProducts(orders, node) {
 								}
 							}
 							emitter.emit('error', errMsg, "", productUrl, node);
-						} 
+						}
+						if(length == 0) {
+							post(orders, node, "");
+						}
 					} catch(e) {
 						emitter.emit('error', e.message, "", productUrl, node);
 					}
@@ -443,6 +463,168 @@ function getProducts(orders, node) {
 
 function b64EncodeUnicode(str) {
 	return new Buffer(str).toString('base64');
+}
+
+function postStoreData(node) {
+	try {
+		var action = node.optionType.toLowerCase();
+		var type =  node.option.toLowerCase();
+		if(type == "customer" && action == "create") {
+			createCustomer(node);
+		}
+	} catch(e) {
+		emitter.emit('error', e.message, e.stack, "", node);
+	}
+}
+
+function createCustomer(node, tag, callback) {
+	try {
+		var obj = node.reqData;
+		var customerUrl = url + "/customers.json";
+		var lastName = '-', firstName, company = '-';
+		if(obj.hasOwnProperty("lastName")) {
+			lastName = obj.lastName;
+		}
+		if(tag == 'createOrder' || tag == 'updateOrder' ) {
+			if(obj.hasOwnProperty("shippingAddress")) {
+				firstName = obj.billingAddress.name;
+			}
+		} else {
+			firstName = obj.firstName;
+		}
+		if(obj.lastName == null || obj.lastName == undefined) {
+			lastName = '-';
+		}
+		var postData = {
+			first_name : firstName,
+			last_name : lastName,
+			email :  obj.email
+		};
+		var args = {
+			data : postData,
+			headers : {
+				Authorization : "Basic " + b64EncodeUnicode(userName + ":" + apiToken),
+				"Content-Type": 'application/json',
+				Accept : "application/json"
+			}
+		};
+		client.post(customerUrl, args, function(data, res) {
+			try {
+				var statusCode = parseInt(res.statusCode/100);
+				if(statusCode == 2) {
+					createCustomersAddress(node, data.addresses.url, tag, callback);
+				} else {
+					if(statusCode == 5) {
+						emitter.emit('error', 'Server Error in Bigcommerce', '', customerUrl, node);
+						return;
+					}
+					if(data[0].hasOwnProperty('message')) {
+						errMsg = data[0].message;
+					}
+					if(data[0].hasOwnProperty('details')) {
+						if(data[0].details.hasOwnProperty('invalid_reason')) {
+							errMsg += ' ' + data[0].details.invalid_reason;
+						}
+					}
+					emitter.emit('error', errMsg, "", customerUrl, node);
+				}
+			} catch(e) {
+				emitter.emit('error', e.message, e.stack, customerUrl, node);
+			}
+		}).on('error', function(err) {
+			emitter.emit('error', errMsg, "", customerUrl, node);
+		});
+	} catch(e) {
+		emitter.emit('error',e.message, e.stack, "", node);
+	}
+}
+
+function createCustomersAddress(node, addressurl, tag, callback) {
+	try {
+		var obj = node.reqData;
+		var  firstName,  lastName,street, city, state, country, zip, phone, company, countryCode ,lastName ="-";
+		if(obj.hasOwnProperty("shippingAddress")) {
+			firstName = obj.billingAddress.name;
+			lastName= obj.billingAddress.lastName;
+			street = obj.billingAddress.street;
+			city = obj.billingAddress.city;
+			state = obj.billingAddress.state;
+			country = obj.billingAddress.country;
+			zip = obj.billingAddress.zip;
+			phone = obj.billingAddress.phone;
+			company = obj.billingAddress.company;
+		} else {
+			firstName = obj.defaultAddress.name;
+			lastName= obj.defaultAddress.lastName;
+			street = obj.defaultAddress.street;
+			city = obj.defaultAddress.city;
+			state = obj.defaultAddress.state;
+			country = obj.defaultAddress.country;
+			zip = obj.defaultAddress.zip;
+			phone = obj.defaultAddress.phone;
+			company = obj.defaultAddress.company;
+		}
+		if(phone == null|| phone == undefined || phone == ""){
+			phone = "-";
+		}
+		if(lastName == null|| lastName == undefined ||  lastName == ""){
+			lastName = "-";
+		} 
+		if(company == null || company == undefined || company == '') {
+			company = '-';
+		}
+		var postData = {
+			first_name: firstName,
+			last_name: lastName,
+			company: company,
+			street_1: street,
+			city: city,
+			state: state,
+			zip: zip,
+			country: country,
+			phone: phone
+		};
+		var args = {
+			data : postData,
+			headers : {
+				Authorization : "Basic " + b64EncodeUnicode(userName + ":" + apiToken),
+				"Content-Type" : 'application/json',
+				Accept : "application/json"
+			}
+		};
+		client.post(addressurl, args, function(data, res) {
+			try {
+				var statusCode = parseInt(res.statusCode/100);
+				if(statusCode == 2) {
+					if(tag == 'createOrder' || tag == 'updateOrder') {
+						callback(data.customer_id);
+					} else {
+						var msg = 'Customer with email address ' + obj.email + ' has been created successfully in Bigcommerce';
+						post(data, node, msg);
+					}
+				} else {
+					if(statusCode == 5) {
+						emitter.emit('error', 'Server Error in Bigcommerce', '', addressurl, node);
+					}
+					if(data[0].hasOwnProperty('message')) {
+						errMsg = data[0].message;
+					}
+					if(data[0].hasOwnProperty('details')) {
+						if(data[0].details.hasOwnProperty('invalid_reason')) {
+							errMsg += ' ' + data[0].details.invalid_reason;
+						}
+					}
+					emitter.emit('error', errMsg,"", addressurl, node);
+				}
+			} catch(e) {
+				emitter.emit('error', e.message, e.stack, addressurl, node);
+			}
+		}).on('error', function(err) {
+			emitter.emit('error', errMsg, "", addressurl, node);
+		});
+	} catch(e) {
+		emitter.emit('error', e.message, e.stack, "", node);
+	}
 }
 
 function post(resArr, node, message) {
