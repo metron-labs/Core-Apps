@@ -1,5 +1,6 @@
 var Client = require('node-rest-client').Client;
 var usStates = require('./json/us_states');
+var moment = require('moment-timezone');
 var client = new Client();
 
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
@@ -34,6 +35,16 @@ function getPostCards(node) {
 				Accept : 'application/json'
 			}
 		};
+		if(node.optionType.toLowerCase() == 'new') {
+			var pathStartTime = node.connection.startedAt;
+			var arr = pathStartTime.split('/');
+			var formattedDateStr = arr[1] + '/' + arr[0] + '/' + arr[2];
+			var startDate = new Date(formattedDateStr);
+			filterDate = toTimeZone(startDate, "YYYY-MM-DDTHH:mm:ssZ", "EST");
+		}
+		if(filterDate != null) {
+			url += '&date_created=' + '{"gt":"' + filterDate + '"}';
+		}
 		client.get(url, args, function(data, res) {
 			try {
 				var status = parseInt(res.statusCode/100);
@@ -63,6 +74,10 @@ function getPostCards(node) {
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, '', node);
 	} 
+}
+
+function toTimeZone(time, format, zone) {
+	return moment(time).tz(zone).format(format);
 }
 
 function formCustomer(dataArr, node) {
