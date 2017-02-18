@@ -8,9 +8,40 @@ var errMsg = '"Connection timeout error" in Mailchimp';
 
 function run(node) {
     try {
+        var nodeType = node.connector.type.toLowerCase();
+        if(nodeType == 'trigger') {
+            getStoreData(node);
+        } else {
+            postStoreData(node);
+        }
+    } catch(e) {
+        emitter.emit('error', e.message, e.stack, "", node);
+    }
+}
+
+function post(response, node, message) {
+    node.resData = response;
+    emitter.emit('success', node, message);
+}
+
+function postStoreData(node) {
+    try {
+        var method = node.optionType.toLowerCase();
+        var url = baseUrl + "/3.0/lists/" + listId + "/members";
+        if(method == 'add') {
+            createSubscriber(url, node);
+        } else {
+            updateSubscriber(url, node);
+        }
+    } catch(e) {
+        emitter.emit('error', e.message, e.stack, "", node);
+    }
+}
+
+function createSubscriber(url, node) {
+    try {
         var reqObj = node.reqData;
         var firstName, lastName = '';
-        var url = baseUrl + "/3.0/lists/" + listId + "/members";
         if(reqObj.hasOwnProperty("shippingAddress")) {
             firstName = reqObj.billingAddress.name
         } else {
@@ -56,7 +87,7 @@ function run(node) {
                     post(data, node, msg);
                 }
             } catch(e) {
-                emitter.emit('error', e.message,  e.stack, "", node);
+                emitter.emit('error', e.message, e.stack, url, node);
             }
         }).on('error',function(err){
             emitter.emit('error', err, postData, url, node);
@@ -66,9 +97,72 @@ function run(node) {
     }
 }
 
-function post(res, node, message) {
-    node.resData = res;
-    emitter.emit("success",node,message);
+function updateSubscriber(url, node) {
+    try {
+        var reqObj = node.reqData;
+        var postData = {
+            email_address : reqObj.email,
+            status : "unsubscribed"
+        };
+        var args = {
+            data : postData,
+            headers : {
+                "Authorization" : "apikey " + apiKey,
+                "Accept" : "application/json",
+                "Content-Type" : "application/json"
+            }
+        };
+        getMemberId(node, function(id) {
+            url += "/" + id;
+            client.put(url, args, function(data, res) {
+                try {
+                    var status = parseInt(res.statusCode/100);
+                    if(status == 2) {
+                      var msg = "Subscriber updated successfully for the email " + reqObj.email;
+                      post(data, node, msg);
+                    }
+                } catch(e) {
+                    emitter.emit('error', e.message, e.stack, url, node);
+                }
+            }).on('error', function(err) {
+                emitter.emit('error', errMsg, args.data, url, node);
+            });
+        });
+    } catch(e) {
+        emitter.emit('error', e.message, e.stack, "", node);
+    }
+}
+
+function getMemberId(node, callback) {
+    try {
+        var reqObj = node.reqData;
+        var url = baseUrl + "/3.0/search-members?query=" + reqObj.email;
+        var args = {
+            headers : {
+                "Authorization" : "apikey " + apiKey,
+                "Accept" : "application/json",
+                "Content-Type" : "application/json"
+            }
+        }
+        client.get(url, args, function(data, res) {
+            try {
+                var status = parseInt(res.statusCode/100);
+                if(status == 2) {
+                    var members = data.exact_matches.members;
+                    if(members.length == 0) {
+                        createSubscriber(node);
+                    } else {
+                        var id = data.exact_matches.members[0].id;
+                        callback(id);
+                    }
+                }
+            } catch(e) {
+                emitter.emit('error', e.message, e.stack, "", node);
+            }
+        });
+    } catch(e) {
+        emitter.emit('error', e.message, e.stack, "", node);
+    }
 }
 
 function testApp(callback) {
