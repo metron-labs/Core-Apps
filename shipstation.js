@@ -215,7 +215,8 @@ function createOrder(node, type, action) {
 			status = 'awaiting_shipment';
 		} else if(reqObj.status == 'Partially Shipped' || reqObj.status == 'Compeleted' || reqObj.status == 'Shipped') {
 			status ='shipped';
-		} else if(reqObj.status == 'Cancelled' || reqObj.status == 'Declined' || reqObj.status == 'Disputed' || reqObj.status == 'Refunded' 
+		} else if(reqObj.status == 'Cancelled' || reqObj.status == 'Declined'
+		 || reqObj.status == 'Disputed' || reqObj.status == 'Refunded' 
 			|| reqObj.status == 'Manual Verification Required') {
 			status ='cancelled';
 		}
@@ -331,11 +332,14 @@ function updateOrder(node, data) {
 		if(reqObj.status == 'Pending' || reqObj.status == 'Awaiting Payment') {
 			status = 'awaiting_payment';
 		} else if(reqObj.status == 'Awaiting Fulfillment' || reqObj.status == 'paid' ||
-			reqObj.status == 'Awaiting Shipment' || reqObj.status == 'Awaiting Pickup' || reqObj.status == 'Paid') {
+			reqObj.status == 'Awaiting Shipment' || reqObj.status == 'Awaiting Pickup' 
+			|| reqObj.status == 'Paid') {
 			status ='awaiting_shipment';
-		} else if(reqObj.status == 'Partially Shipped' || reqObj.status == 'Compeleted' || reqObj.status == 'Shipped') {
+		} else if(reqObj.status == 'Partially Shipped' || reqObj.status == 'Compeleted'
+		 || reqObj.status == 'Shipped') {
 			status = 'shipped';
-		} else if( reqObj.status == 'Cancelled' || reqObj.status == 'Declined' || reqObj.status == 'Disputed' || reqObj.status == 'Refunded' 
+		} else if( reqObj.status == 'Cancelled' || reqObj.status == 'Declined'
+		 || reqObj.status == 'Disputed' || reqObj.status == 'Refunded' 
 			|| reqObj.status == 'Manual Verification Required' ) {
 			status = 'cancelled';
 		}
@@ -388,19 +392,16 @@ function updateOrder(node, data) {
 			}
 		};
 		client.post(newUrl, args, function(data, res) {
-				try {
-					var statusCode = parseInt(res.statusCode/100);
-					if(statusCode == 2) {
-						msg = "Order for " + data.orderKey + " updated successfully in Shipstation.";
-						post(data, node, msg);
-					} else {
-						if(data.hasOwnProperty("errors")) {
-							errMsg = data.errors;
-						}
-						emitter.emit('error', errMsg, data, newUrl, node);
+			try {
+				var statusCode = parseInt(res.statusCode/100);
+				if(statusCode == 2) {
+					msg = "Order for " + data.orderKey + " updated successfully in Shipstation.";
+					post(data, node, msg);
+				} else {
+					if(data.hasOwnProperty("errors")) {
+						errMsg = data.errors;
 					}
-				} catch(e) {
-					emitter.emit('error', e.message, "", "", node);
+					emitter.emit('error', errMsg, data, newUrl, node);
 				}
 			} catch(e) {
 				emitter.emit('error', e.message, "", "", node);
@@ -444,16 +445,7 @@ function createShippingLabel (node, data) {
 							phone : fromPhone,
 							residential : fromResidential
 						},
-						shipTo : {
-							name : obj.shippingAddress.name,
-							company : obj.shippingAddress.company,
-							street1 : obj.shippingAddress.street,
-							city : obj.shippingAddress.city,
-							state : obj.shippingAddress.state,
-							postalCode : obj.shippingAddress.zip,
-							country : obj.shippingAddress.countryCode,
-							phone : obj.shippingAddress.phone
-						},
+						shipTo :data.shipTo,
 						insuranceOptions : data.insuranceOptions,
 						internationalOptions : {
 							contents : "merchandise",
@@ -494,6 +486,9 @@ function createShippingLabel (node, data) {
 								}
 								if(data.hasOwnProperty('ExceptionMessage')) {
 									errMsg = data.ExceptionMessage;
+								}
+								if(data.hasOwnProperty('InnerException')) {
+									errMsg = data.InnerException.ExceptionMessage;
 								}
 								emitter.emit('error', errMsg, data, newUrl, node);
 							} 
@@ -661,15 +656,15 @@ function convertPdf(data, res, node) {
 		var pdfData =  'data:application/pdf;base64,'+ new Buffer(data);
 		var buf = decodeBase64(pdfData);
 		var ext = pdfData.split(';')[0].match(/jpeg|png|gif|pdf/)[0];
-		var file = writeFile.stream('./shipstation/label/' + reqObj.id + '.' + ext);
+		var file = writeFile.stream('/opt/shipstation/label/' + reqObj.id + '.' + ext);
 		file.write(buf.data);
 		file.end();
 		file.on('finish' , function() {
 			var msg = "Shipping label created successfully in Shipstation.";
 			reqObj.id = reqObj.id.toString();
-			reqObj.fileType = res.headers["content-type"];
+			reqObj.fileType = 'application/pdf';
 			reqObj.fileName = reqObj.id + '.' + ext;
-			reqObj.fileUrl = './shipstation/label/' + reqObj.id + '.' + ext;
+			reqObj.fileUrl = '/opt/shipstation/label/' + reqObj.id + '.' + ext;
 			node.dataObj = reqObj;
 			emitter.emit('save-to-core', node, msg);
 		});

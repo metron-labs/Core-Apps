@@ -1,5 +1,6 @@
 var Client = require('node-rest-client').Client;
 var client = new Client();
+var fs = require('fs');
 
  var emitter = require('../core-integration-server-v2/javascripts/emitter');
 

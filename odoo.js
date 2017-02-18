@@ -3,7 +3,8 @@ var async = require('async');
 
 var emitter = require('../core-integration-server-v2/javascripts/emitter');
 
-var userName, password, dbName, url, model, actionName;
+var userName, password, dbName, url, model, actionName, count, offset;
+var finalDataArr = [];
 var errMsg = '"Connection timeout error" in Odoo';
 
 function run(node) {
@@ -19,14 +20,64 @@ function run(node) {
 		});
 		var odoo = new odooApp(opts);
 		if(nodeType == 'trigger') {
-			if(type == "product") {
-				getOdooProducts(odoo, node);
-			} else {
-				getOdooOrders(odoo, type, node);
-			}
+			getDataCount(odoo, type, node);
 		} else {
 			postOdooObjects(odoo, type, node);
 		}
+	} catch(e) {
+		emitter.emit('error', e.message, e.stack, '', node);
+	}
+}
+
+function getDataCount(odoo, type, node) {
+	try {
+		if(type == "product") {
+			model = "product.product";
+		} else if (type == "repair order") {
+			model = "mrp.repair";
+		} else {
+			model = 'sale.order';
+		}		
+		odoo.connect(function (err, res) {
+			try {
+				if (err) {
+					if(err.hasOwnProperty('data')) {
+						errMsg = err.data.message;
+					}
+					emitter.emit('error', errMsg, '', model, node);
+					return;
+				}			
+				var params = {
+					domain : [['id','>', '0']]
+				};			
+				odoo.search(model, params, function (err, result) {
+					try {
+						if (err) { 
+							if(err.hasOwnProperty('data')) {
+								errMsg = err.data.message;
+							}
+							emitter.emit('error', errMsg, '', model, node);
+							return;
+						} else {
+							count = result.length;
+							if(count == 0) {
+								emitter.emit('error', 'No ' + type + 's found in Odoo', '', model, node);
+								return;
+							}
+							if(type == "product") {
+								getOdooProducts(odoo, node);
+							} else {
+								getOdooOrders(odoo, type, node);
+							}
+						}
+					} catch(e) {
+						emitter.emit('error', e.message, e.stack, '', node);
+					}
+				});	
+			} catch(e) {
+				emitter.emit('error', e.message, e.stack, '', node);
+			}
+		});	
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, '', node);
 	}
@@ -43,10 +94,12 @@ function getOdooProducts(odoo, node) {
 					}
 					emitter.emit('error', errMsg, '', model, node);
 					return;
-				}			
+				}
+				offset = finalDataArr.length;
 				var params = {
-					offset: 0
-				};			
+					offset : offset,
+					limit : 10
+				};		
 				odoo.browse_by_id(model, params, function (err, products) {
 					try {
 						if (err) { 
@@ -89,15 +142,22 @@ function setProducts(productsArr, odoo, node) {
 			resObj.description = prodObj.description_sale;
 			resObj.isLast = false;
 			resObj.slackFlag = false;
-			if(i == productsArr.length-1) {
+			var length = finalDataArr.length + i;
+			if(length == count-1) {
 				resObj.isLast = true;
-			}
-			if(actionName == 'slack' && i ==0) {
-				resObj.slackFlag = true;
-			}
+				if(actionName == 'slack') {
+					resObj.slackFlag = true;
+				}
+			}			
 			resArr[i] = resObj;
-		}
-		post(resArr, node, '');
+			if(i == productsArr.length-1) {
+				post(resArr, node, '');
+				finalDataArr = finalDataArr.concat(resArr);
+				if(finalDataArr.length != count) {
+					getOdooProducts(odoo, node);
+				}
+			}
+		}		
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, '', node);
 	}
@@ -118,8 +178,10 @@ function getOdooOrders(odoo, type, node) {
 					emitter.emit('error', errMsg, '', model, node);
 					return; 
 				}
+				offset = finalDataArr.length;
 				var params = {
-					offset: 0
+					offset : offset,
+					limit : 10
 				};
 				odoo.browse_by_id(model, params, function (err, orders) {
 					try {
@@ -174,13 +236,7 @@ function setOrders(ordersArr, odoo, type, node) {
 			resObj.createdAt = obj.create_date;
 			resObj.updatedAt = obj.__last_update;
 			resObj.slackFlag = false;
-			if(actionName == 'slack' && i == 0) {
-				resObj.slackFlag = true;
-			}
 			resObj.isLast = false;
-			if(i == ordersArr.length-1) {
-				resObj.isLast = true;
-			}
 			resArr[i] = resObj;
 		}
 		getAddress(resArr, odoo, type, node);
@@ -292,7 +348,15 @@ function getOrderLines(ordersArr, odoo, type, node) {
 				}
 				obj.items = items;
 				if(length == 0) {
-					post(ordersArr, node, '');
+					obj.isLast = true;
+					if(actionName == 'slack') {
+						obj.slackFlag = true;
+					}
+					post(resArr, node, '');
+					finalDataArr = finalDataArr.concat(resArr);
+					if(finalDataArr.length != count) {
+						getOdooOrders(odoo, node);
+					}
 				}
 			});
 		}, function(error) {
@@ -388,6 +452,7 @@ function createPartner(odoo, type, node, callback) {
 					addr = reqObj.shippingAddress;
 				} else {
 					addr = reqObj.defaultAddress;
+					addr.name = reqObj.firstName;
 				}
 				getCountryId(odoo, addr.country, node, function(id) {
 					var params = {
@@ -396,13 +461,13 @@ function createPartner(odoo, type, node, callback) {
 						street : addr.street,
 						city  :  addr.city,
 						mobile : addr.phone,
-						state  : "CA",
+						state  : addr.state,
 						zip    :  addr.zip,
 						country_id : id
 					};
 					model = 'res.partner';
 					odoo.create(model, params, function (err, partnerId) {
-						try { 
+						try {
 							if (err) {
 								if(err.hasOwnProperty('data')) {
 									errMsg = err.data.arguments[0];
@@ -535,6 +600,7 @@ function updatePartner(odoo, type, node, callback) {
 					addr = reqObj.shippingAddress;
 				} else {
 					addr = reqObj.defaultAddress;
+					addr.name = reqObj.firstName;
 				}
 				getPartnerId(odoo, type, node, function(partnerId) {
 					getCountryId(odoo, addr.country, node, function(id) {
@@ -543,7 +609,7 @@ function updatePartner(odoo, type, node, callback) {
 							street : addr.street,
 							city  :  addr.city,
 							mobile : addr.phone,
-							state  : "CA",
+							state  : addr.state,
 							zip    :  addr.zip,
 							country_id : id
 						};

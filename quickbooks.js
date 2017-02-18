@@ -332,7 +332,7 @@ function postCustomer(url,  oauth, node, callback) {
 			data:postData,
 			headers : {Authorization: auth,Accept: "application/json","Content-Type":"application/json"}
 		};
-		setTimeout(function(){
+		setTimeout(function() {
 			client.post(url, args, function (data, res) {
 				try {
 					var status = parseInt(res.statusCode/100);
@@ -464,9 +464,10 @@ function getProductDetails(url, type, oauth, node) {
 function postInvoiceOrSalesReceipt(url, type, oauth, node) {
 	try {
 		var lineArr = [];
-		var newUrl = url + companyId + "/" + type.toLowerCase();
+		var str = type.replace(/\s/g,'').toLowerCase();
+		var newUrl = url + companyId + "/" + str.toLowerCase();
 		var obj = node.reqData;
-		var postData,lineObj;
+		var postData, lineObj;
 		var items = obj.items;
 		var msgType = type.charAt(0).toUpperCase() + type.substring(1);
 		getCustomerId(url, oauth, node, function(cusRef) {
@@ -517,7 +518,7 @@ function postInvoiceOrSalesReceipt(url, type, oauth, node) {
 									}
 								}
 							}
-							emitter.emit('error', errMsg, data, url, node);
+							emitter.emit('error', errMsg, data, newUrl, node);
 						}
 					} catch(e) {
 						emitter.emit('error', e.message, e.stack, "", node);
@@ -537,7 +538,7 @@ function getCustomerId(url, oauth, node, callback) {
 		var obj = node.reqData;
 		var customerRef = {};
 		var query = "select * from customer where DisplayName in ('" + obj.billingAddress.name +"')";
-		newUrl = url + companyId + "/query?query= " + encodeURIComponent(query);
+		var newUrl = url + companyId + "/query?query=" + encodeURIComponent(query);
 		setTimeout(function() {
 			oauth.get(newUrl, accessToken, tokenSecret, function(err, data, res) {
 				try {
@@ -569,7 +570,6 @@ function getCustomerId(url, oauth, node, callback) {
 
 function getItemId(url, oauth, item, node, callback) {
 	try {
-		var id = '';
 		var query = "select * from item where Name in ('" + item.name + "')";
 		var newUrl = url + companyId + "/query?query= " + encodeURIComponent(query);
 		setTimeout(function() {
@@ -620,7 +620,6 @@ function testApp(callback) {
 			"HMAC-SHA1", null, { Accept : "application/json"} );
 		var query = "select * from customer";
 		url += companyId + "/query?query=" + encodeURIComponent(query);
-		console.log(url);
 		oauth.get(url,accessToken,tokenSecret,function(err,data,res) {
 			try {
 				if(err) {

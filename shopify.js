@@ -138,6 +138,7 @@ function formCustomer(dataArr, node) {
 			resObj.updatedAt = obj.updated_at;
 			resObj.firstName = obj.first_name;
 			resObj.lastName = obj.last_name;
+			resObj.orderCount = obj.orders_count;
 			var addr1 = {};
 			addr1.firstName = obj.default_address.first_name;
 			addr1.lastName = obj.default_address.last_name;

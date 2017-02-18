@@ -75,14 +75,14 @@ function convertImage(data, res, node) {
 		for( var i=0; i < 10; i++ ) {
 			randomText += possible.charAt(Math.floor(Math.random() * possible.length));
 		}
-		var file = writeFile.stream('./images/handwriting/' + reqObj.id + '.' + ext);
+		var file = writeFile.stream('/opt/Core-Apps/images/handwriting/' + reqObj.id + '.' + ext);
 		file.write(buf);
 		file.end();
 		file.on('finish' , function() {
-			gm('./images/handwriting/ post.png')
-			.composite('./images/handwriting/' + reqObj.id + '.' + ext)
+			gm('/opt/Core-Apps/images/handwriting/post.png')
+			.composite('/opt/Core-Apps/images/handwriting/' + reqObj.id + '.' + ext)
 			.geometry('+320+550')
-			.write('./images/handwriting/' + randomText + '.' + ext, function (err) {
+			.write('/opt/Core-Apps/images/handwriting/' + randomText + '.' + ext, function (err) {
 				if (err) {
 					var errMsg = 'Error while rendering file by Handwriting'; console.log(err);
 					emitter.emit('error', errMsg, '', '', node);
@@ -97,15 +97,15 @@ function convertImage(data, res, node) {
 					};
 					server.connect(options);
 					server.on('ready', function() {
-						server.put('./images/handwriting/' + randomText + '.' + ext, randomText + '.' + ext, function(err) {
+						server.put('/opt/Core-Apps/images/handwriting/' + randomText + '.' + ext, randomText + '.' + ext, function(err) {
 							if (err) {
 								var errMsg = 'Error while uploading file created by Handwriting'; 
 								emitter.emit('error', errMsg, '', '', node);
 							} else {
 								reqObj.fileUrl = 'http://neemtecsolutions.com/corehq/' + randomText + '.' + ext;
 								node.dataObj = reqObj;
-								fs.unlink('./images/handwriting/' + reqObj.id + '.' + ext);
-								fs.unlink('./images/handwriting/' + randomText + '.' + ext);
+								fs.unlink('/opt/Core-Apps/images/handwriting/' + reqObj.id + '.' + ext);
+								fs.unlink('/opt/Core-Apps/images/handwriting/' + randomText + '.' + ext);
 								var message = 'Successfully rendered your file in Handwriting';
 								emitter.emit('save-to-core', node, message);
 							}
