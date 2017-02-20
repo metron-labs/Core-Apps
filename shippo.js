@@ -34,7 +34,7 @@ function run(node) {
 }
 
 function getStoreData(url, node) {
-	try {	
+	try {
 		var args = {
 			headers: { Authorization: "ShippoToken " + shippoToken }
 		};
@@ -679,7 +679,7 @@ function getUSProvinceCode(usstate) {
 }
 
 function createOrder(url, type, node) {
-	try { 
+	try {
 		var newUrl = url + "orders";
 		var items = [];	
 		var obj = node.reqData;
@@ -691,7 +691,8 @@ function createOrder(url, type, node) {
 			item.title = itemObj.name;
 			item.quantity = itemObj.quantity;
 			netQuantity += itemObj.quantity;
-			item.price = itemObj.price;
+			price = parseFloat(itemObj.price);
+			item.price = price.toFixed(2);
 			item.sku = itemObj.sku;
 			if(itemObj.hasOwnProperty("currency")) {
 				currency = itemObj.currency;
@@ -716,7 +717,7 @@ function createOrder(url, type, node) {
 		}
 		postData = {
 			order_number : obj.id,
-			total_price : obj.price,
+			total_price : parseFloat(obj.price).toFixed(2),
 			address_from : {
 				object_purpose : "PURCHASE",
 				name : fromName,
@@ -778,7 +779,12 @@ function createOrder(url, type, node) {
 					} else if(data.hasOwnProperty('to_address')) {
 						errMsg = data.to_address[0].__all__[0] + ' in to address';
 					} else if(data.hasOwnProperty('items')) {
-						errMsg = data.items[0].__all__[0];
+						if(data.items.hasOwnProperty('price')) {
+							errMsg = data.items[0].price[0];
+						}
+						if(data.hasOwnProperty('__all__')) {
+							errMsg = data.items[0].__all__[0];
+						}
 					} else if(data.hasOwnProperty('__all__')) {
 						errMsg = data.__all__[0];
 					}				

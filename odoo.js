@@ -33,11 +33,13 @@ function getDataCount(odoo, type, node) {
 	try {
 		if(type == "product") {
 			model = "product.product";
+		} else if (type == "customer") {
+			model = "res.partner";
 		} else if (type == "repair order") {
 			model = "mrp.repair";
 		} else {
 			model = 'sale.order';
-		}		
+		}
 		odoo.connect(function (err, res) {
 			try {
 				if (err) {
@@ -46,10 +48,10 @@ function getDataCount(odoo, type, node) {
 					}
 					emitter.emit('error', errMsg, '', model, node);
 					return;
-				}			
+				}
 				var params = {
 					domain : [['id','>', '0']]
-				};			
+				};	
 				odoo.search(model, params, function (err, result) {
 					try {
 						if (err) { 
@@ -124,6 +126,47 @@ function getOdooProducts(odoo, node) {
 	}
 }
 
+function getOdooCustomers(odoo, node) {
+	try {
+		model = "res.partner";
+		odoo.connect(function (err, res) {
+			try {
+				if (err) {
+					if(err.hasOwnProperty('data')) {
+						errMsg = err.data.message;
+					}
+					emitter.emit('error', errMsg, '', model, node);
+					return;
+				}
+				offset = finalDataArr.length;
+				var params = {
+					offset : offset,
+					limit : 10
+				};
+				odoo.browse_by_id(model, params, function (err, customers) {
+					try {
+						if (err) { 
+							if(err.hasOwnProperty('data')) {
+								errMsg = err.data.message;
+							}
+							emitter.emit('error', errMsg, '', model, node);
+							return;
+						} else {
+							setCustomers(customers, odoo, node);
+						}
+					} catch(e) {
+						emitter.emit('error', e.message, e.stack, '', node);
+					}
+				});	
+			} catch(e) {
+				emitter.emit('error', e.message, e.stack, '', node);
+			}
+		});	
+	} catch(e) {
+		emitter.emit('error', e.message, e.stack, '', node);
+	}
+}
+
 function setProducts(productsArr, odoo, node) {
 	try {
 		var resArr = [];
@@ -158,6 +201,76 @@ function setProducts(productsArr, odoo, node) {
 				}
 			}
 		}		
+	} catch(e) {
+		emitter.emit('error', e.message, e.stack, '', node);
+	}
+}
+
+function setCustomers(customersArr, odoo, node) {
+	try {
+		var resArr = [];
+		var resObj, cusObj, name = '', street = '', city = '', zip = '', 
+		mobile = '', company = '', country = '', state = '';
+		for(var i = 0; i < customersArr.length; i++) {
+			cusObj = customersArr[i];
+			resObj = {};
+			resObj.id = cusObj.id;
+			if(!(cusObj.name instanceof Boolean)) {
+				name = cusObj.name;
+			}
+			resObj.name = name;
+			resObj.createdAt = cusObj.create_date;
+			resObj.updatedAt = cusObj.__last_update;
+			resObj.email = cusObj.email;
+			var addr = {};
+			addr.name = name;
+			if(!(cusObj.street instanceof Boolean)) {
+				street = cusObj.street;
+			}
+			addr.street = street;
+			if(!(cusObj.city instanceof Boolean)) {
+				city = cusObj.city;
+			}
+			addr.city = city;
+			if(!(cusObj.zip instanceof Boolean)) {
+				zip = cusObj.zip;
+			}
+			addr.zip = zip;
+			if(!(cusObj.mobile instanceof Boolean)) {
+				mobile = cusObj.mobile;
+			}
+			addr.phone = mobile;
+			if(!(cusObj.state_id instanceof Boolean)) {
+				state = cusObj.state_id[1];
+			}
+			addr.state = state;
+			if(!(cusObj.company_id instanceof Boolean)) {
+				company = cusObj.company_id[1];
+			}
+			addr.company = company;
+			if(!(cusObj.country_id instanceof Boolean)) {
+				country = cusObj.country_id[1];
+			}
+			addr.country = country;
+			resObj.defaultAddress = addr;
+			resObj.isLast = false;
+			resObj.slackFlag = false;
+			var length = finalDataArr.length + i;
+			if(length == count-1) {
+				resObj.isLast = true;
+				if(actionName == 'slack') {
+					resObj.slackFlag = true;
+				}
+			}			
+			resArr[i] = resObj;
+			if(i == customersArr.length-1) {
+				post(resArr, node, '');
+				finalDataArr = finalDataArr.concat(resArr);
+				if(finalDataArr.length != count) {
+					getOdooCustomers(odoo, node);
+				}
+			}
+		}
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, '', node);
 	}
