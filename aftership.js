@@ -205,7 +205,7 @@ function postStoreData(type, node) {
 				var status = parseInt(res.statusCode/100);
 				var msg;
 				if(status == 2) {
-					msg = "Tracking for the order" + reqObj.id + "has been created successfully in Aftership";
+					msg = "Tracking for the order" + reqObj.id + " has been created successfully in Aftership";
 					post(data, node, msg);
 				} else {
 					if(status == 5) {

@@ -68,6 +68,8 @@ function getDataCount(odoo, type, node) {
 							}
 							if(type == "product") {
 								getOdooProducts(odoo, node);
+							} else if(type == 'customer') {
+								getOdooCustomers(odoo, node);
 							} else {
 								getOdooOrders(odoo, type, node);
 							}
@@ -482,9 +484,11 @@ function getOrderLines(ordersArr, odoo, type, node) {
 
 function getResult(id, model, odoo, node, callback) {
 	try {
+		console.log('getResult........................');
 		odoo.connect(function (err, res) {
 			try {
-				if (err) { 
+				if (err) {
+					console.log('getResult........... err.............', err);
 					if(err.hasOwnProperty('data')) {
 						errMsg = err.data.message;
 					}
@@ -496,7 +500,9 @@ function getResult(id, model, odoo, node, callback) {
 				};
 				odoo.get(model, params, function (err, data) {
 					try {
+						console.log('getResult............. get...........');
 						if (err) { 
+							console.log('getResult........... get....... err......', err);
 							if(err.hasOwnProperty('data')) {
 								errMsg = err.data.message;
 							}
@@ -550,10 +556,12 @@ function createCustomer(odoo, type, node) {
 
 function createPartner(odoo, type, node, callback) {
 	try {
+		console.log('createPartner........................');
 		var reqObj = node.reqData;
 		odoo.connect(function (err, res) {
 			try {
 				if (err) { 
+					console.log('createPartner.......... err..............', err);
 					if(err.hasOwnProperty('data')) {
 						errMsg = err.data.message;
 					}
@@ -580,8 +588,10 @@ function createPartner(odoo, type, node, callback) {
 					};
 					model = 'res.partner';
 					odoo.create(model, params, function (err, partnerId) {
-						try {
+						try { 
+							console.log('createPartner........... create .............',partnerId);
 							if (err) {
+								console.log('createPartner.......... create .......... err....', err);
 								if(err.hasOwnProperty('data')) {
 									errMsg = err.data.arguments[0];
 								}
@@ -605,11 +615,13 @@ function createPartner(odoo, type, node, callback) {
 }
 
 function getCountryId(odoo, name, node, callback) {
-	try {		
+	try {
+		console.log('getCountryId........................');
 		model = 'res.country';
 		odoo.connect(function (err, res) {
 			try { 
 				if (err) { 
+					console.log('getCountryId........... err.............', err);
 					if(err.hasOwnProperty('data')) {
 						errMsg = err.data.message;
 					}
@@ -628,7 +640,9 @@ function getCountryId(odoo, name, node, callback) {
 				}
 				odoo.search('res.country', params, function (err, country) {
 					try {
-						if (err) { 
+						console.log('getCountryId...... search..................', country);
+						if (err) {
+							console.log('getCountryId....... search........ err.........', err);
 							if(err.hasOwnProperty('data')) {
 								errMsg = err.data.arguments[0];
 							}
@@ -652,10 +666,12 @@ function getCountryId(odoo, name, node, callback) {
 
 function getPartnerId(odoo, type, node, callback) {
 	try {
+		console.log('getPartnerId........................');
 		var reqObj = node.reqData;
 		odoo.connect(function (err, res) {
 			try { 
 				if (err) { 
+					console.log('getPartnerId........ err................', err);
 					if(err.hasOwnProperty('data')) {
 						errMsg = err.data.message;
 					}
@@ -668,7 +684,9 @@ function getPartnerId(odoo, type, node, callback) {
 				model = 'res.partner';
 				odoo.search(model, params, function (err, partner) {
 					try {
-						if (err) { 
+						console.log('getPartnerId....... search.................');
+						if (err) {
+							console.log('getPartnerId.......... search....... err.......', err); 
 							if(err.hasOwnProperty('data')) {
 								errMsg = err.data.arguments[0];
 							}
@@ -768,10 +786,12 @@ function createItem(odoo, type, node) {
 
 function getProductId(prodObj, odoo, type, node,  callback) {
 	try {
+		console.log('getProductId........................');
 		model ='product.product';
 		odoo.connect(function (err, res) {
 			try {
-				if (err) { 
+				if (err) {
+					console.log('getProductId............. err...........', err);
 					if(err.hasOwnProperty('data')) {
 						errMsg = err.data.message;
 					}
@@ -783,7 +803,9 @@ function getProductId(prodObj, odoo, type, node,  callback) {
 				}; 
 				odoo.search(model, params, function (err, product) {
 					try {
+						console.log('getProductId............ search............', product);
 						if (err) { 
+							console.log('getAddress............. search.... err.......', err);
 							if(err.hasOwnProperty('data')) {
 								errMsg = err.data.message;
 							}
@@ -813,9 +835,11 @@ function getProductId(prodObj, odoo, type, node,  callback) {
 
 function createProduct(odoo, obj, type, node, callback) {
 	try {
+		console.log('createProduct........................');
 		odoo.connect(function (err, res) {
 			try {
 				if (err) { 
+					console.log('createProduct............ err............', err);
 					if(err.hasOwnProperty('data')) {
 						errMsg = err.data.message;
 					}
@@ -829,7 +853,9 @@ function createProduct(odoo, obj, type, node, callback) {
 				model = 'product.product';
 				odoo.create(model, params, function (err, productId) {
 					try { 
+						console.log('createProduct........ create................', productId);
 						if (err) { 
+							console.log('createProduct......... create .... err...........', err);
 							if(err.hasOwnProperty('data')) {
 								errMsg = err.data.message;
 							}
@@ -856,10 +882,12 @@ function createProduct(odoo, obj, type, node, callback) {
 
 function createSaleOrder(odoo, type, node) {
 	try {
+		console.log('createSaleOrder........................');
 		var reqObj = node.reqData;
 		odoo.connect(function (err, res) {
 			try {
 				if (err) { 
+					console.log('createSaleOrder......... err...............', err);
 					if(err.hasOwnProperty('data')) {
 						errMsg = err.data.message;
 					}
@@ -873,7 +901,9 @@ function createSaleOrder(odoo, type, node) {
 					model = 'sale.order';
 					odoo.create(model, params, function (err, orderId) {
 						try {
-							if (err) { 
+							console.log('createSaleOrder......... create...............', orderId);
+							if (err) {
+								console.log('createSaleOrder....... create............ err.....', err);
 								if(err.hasOwnProperty('data')) {
 									errMsg = err.data.message;
 								}
@@ -898,6 +928,7 @@ function createSaleOrder(odoo, type, node) {
 
 function createOrderLines(odoo, type, orderId, node) {
 	try {
+		console.log('createOrderLines........................');
 		var reqObj = node.reqData;
 		var itemArr = reqObj.items;
 		var length = itemArr.length;
@@ -905,6 +936,7 @@ function createOrderLines(odoo, type, orderId, node) {
 			odoo.connect(function (err, res) {
 				try {
 					if (err) { 
+						console.log('createOrderLines..... err...................');
 						if(err.hasOwnProperty('data')) {
 							errMsg = err.data.message;
 						}
@@ -923,7 +955,9 @@ function createOrderLines(odoo, type, orderId, node) {
 						model = 'sale.order.line';
 						odoo.create(model, params, function (err, orders) {
 							try {
+								console.log('createSaleOrder.... line....................', orders);
 								if (err) { 
+									console.log('createSaleOrder..... line....... err...........', err);
 									if(err.hasOwnProperty('data')) {
 										errMsg = err.data.message;
 									}
@@ -952,6 +986,7 @@ function createOrderLines(odoo, type, orderId, node) {
 
 function updateProducts(odoo, type, orderId, node) {
 	try {
+		console.log('updateProducts........................');
 		var reqObj = node.reqData;
 		var itemArr = reqObj.items;
 		var length = itemArr.length;
@@ -959,6 +994,7 @@ function updateProducts(odoo, type, orderId, node) {
 			odoo.connect(function (err, res) {
 				try {
 					if (err) { 
+						console.log('updateProducts............ err............', err);
 						if(err.hasOwnProperty('data')) {
 							errMsg = err.data.message;
 						}
@@ -974,7 +1010,9 @@ function updateProducts(odoo, type, orderId, node) {
 							};
 							odoo.update('product.product', productId, params, function (err, data) {
 								try {
-									if (err) { 
+									console.log('updateProducts........ update................');
+									if (err) {
+										console.log('updateProducts.............. update... err.......', err);
 										if(err.hasOwnProperty('data')) {
 											errMsg = err.data.message;
 										}
@@ -1004,9 +1042,11 @@ function updateProducts(odoo, type, orderId, node) {
 
 function updateOrder(odoo, orderId, node) {
 	try {
+		console.log('updateOrder........................');
 		odoo.connect(function (err, res) {
 			try {
-				if (err) { 
+				if (err) {
+					console.log('updateOrder........... err.............' err);
 					if(err.hasOwnProperty('data')) {
 						errMsg = err.data.message;
 					}
@@ -1021,7 +1061,9 @@ function updateOrder(odoo, orderId, node) {
 				model = 'sale.order';
 				odoo.update(model, orderId, params, function (err, id) {
 					try {
-						if (err) { 
+						console.log('updateOrder.......... update..............');
+						if (err) {
+							console.log('updateOrder.......... update...... err........', err); 
 							if(err.hasOwnProperty('data')) {
 								errMsg = err.data.message;
 							}
