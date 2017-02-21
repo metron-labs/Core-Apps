@@ -936,7 +936,7 @@ function createOrderLines(odoo, type, orderId, node) {
 			odoo.connect(function (err, res) {
 				try {
 					if (err) { 
-						console.log('createOrderLines..... err...................');
+						console.log('createOrderLines..... err...................', err);
 						if(err.hasOwnProperty('data')) {
 							errMsg = err.data.message;
 						}
@@ -1046,7 +1046,7 @@ function updateOrder(odoo, orderId, node) {
 		odoo.connect(function (err, res) {
 			try {
 				if (err) {
-					console.log('updateOrder........... err.............' err);
+					console.log('updateOrder........... err.............',err);
 					if(err.hasOwnProperty('data')) {
 						errMsg = err.data.message;
 					}
