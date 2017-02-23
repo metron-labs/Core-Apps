@@ -26,6 +26,10 @@ function getCoreCacheData(node) {
 			try {
 				var resArr = [];
 				var resObj;
+				if(data.length == 0) {
+					emitter.emit('error', 'No data found in Clearbit', '', '', node);
+					return;
+				}
 				for(var i = 0; i < data.length; i++) {
 					resObj = data[i].dataObj;
 					if(resObj.hasOwnProperty('shippingAddress')) {
@@ -42,7 +46,7 @@ function getCoreCacheData(node) {
 					resArr[i] = resObj;
 				}
 				node.resData = resArr;
-				emitter.emit("success", node, message);
+				emitter.emit("success", node, '');
 			} catch(e) {
 				emitter.emit('error', e.message, e.stack, "", node);
 			}
@@ -124,6 +128,7 @@ function enrichData(data, node) {
 	    reqObj.twitterFollowers = tfollowers;
 	    reqObj.gitHubFollowers = gfollowers;
 	    reqObj.gitHubFollowing = gfollowing;
+	    node.dataObj = reqObj;
 	   	var msg = 'Person with email id ' + reqObj.email + ' had found in Clearbit';
 		emitter.emit('save-to-core', node, msg);
 	} catch(e) {

@@ -324,17 +324,15 @@ function getOdooOrders(odoo, type, node) {
 function setOrders(ordersArr, odoo, type, node) {
 	try {
 		model = "sale.order";
-		var orderType = "SALE-ORDER:";
 		if (type == "repair order") {
 			model = "mrp.repair";
-			orderType = "REPAIR-ORDER:";
 		} 
 		var obj, resObj;
 		var resArr = [];
 		for(var i = 0; i < ordersArr.length; i++) {
 			resObj = {};
 			obj = ordersArr[i];
-			resObj.id = orderType + obj.id;
+			resObj.id = obj.name;
 			var price = obj.amount_total.toString();
 			if (price.length > 10) {
 				price = price.substring(0, 9);
@@ -347,7 +345,7 @@ function setOrders(ordersArr, odoo, type, node) {
 				resObj.items = obj.operations[0];
 			}
 			resObj.price = price;
-			resObj.name = obj.name;
+			resObj.name = obj.id;
 			resObj.createdAt = obj.create_date;
 			resObj.updatedAt = obj.__last_update;
 			resObj.slackFlag = false;
@@ -467,8 +465,8 @@ function getOrderLines(ordersArr, odoo, type, node) {
 					if(actionName == 'slack') {
 						obj.slackFlag = true;
 					}
-					post(resArr, node, '');
-					finalDataArr = finalDataArr.concat(resArr);
+					post(ordersArr, node, '');
+					finalDataArr = finalDataArr.concat(ordersArr);
 					if(finalDataArr.length != count) {
 						getOdooOrders(odoo, node);
 					}
@@ -532,7 +530,9 @@ function postOdooObjects(odoo, type, node) {
 			createSaleOrder(odoo, type, node);
 		} else if(type == "invoice" && operation == "create") {
 			createInvoice(odoo, type, node);
-		}  
+		}  else if(type == "sale order" || 'repair order' && operation == "update") {
+			updateOdooObject(odoo, type, node);
+		}
 	} catch(e) {
 		emitter.emit('error', e.message, e.stack, '', node);
 	}
@@ -1023,7 +1023,7 @@ function updateOrder(odoo, orderId, node) {
 				model = 'sale.order';
 				odoo.update(model, orderId, params, function (err, id) {
 					try {
-						if (err) { 
+						if (err) {
 							if(err.hasOwnProperty('data')) {
 								errMsg = err.data.message;
 							}
@@ -1036,6 +1036,241 @@ function updateOrder(odoo, orderId, node) {
 						emitter.emit('error', e.message, e.stack, '', node);
 					}
 				});
+			} catch(e) {
+				emitter.emit('error', e.message, e.stack, '', node);
+			}
+		});
+	} catch(e) {
+		emitter.emit('error', e.message, e.stack, '', node);
+	}
+}
+
+function createInvoice(odoo, type, node) {
+	try {
+		var reqObj = node.reqData;
+		odoo.connect(function (err, res) {
+			try {
+				if (err) { 
+					emitter.emit('error', errMsg, '', model, node);
+					return; 
+				}
+				var params = {
+					domain : [['name','=', reqObj.name]]
+				};
+				odoo.search('sale.order', params, function(err, order) {
+					if(err) {
+						emitter.emit('error', errMsg, '', model, node);
+						return; 
+					}	
+					var orderId = order[0];
+					getResult(orderId, 'sale.order', odoo, node, function(order1) { console.log('............ 4 .......................');
+						getResult(orderId, 'sale.order.line', odoo, node, function(orderLine){ console.log('............ 5 .......................');
+							order1[0].order_line = orderLine;
+							var partnerId = order1[0].partner_id[0];
+							getResult(partnerId, 'res.partner', odoo, node, function(partner) { console.log('............ 6 .......................');
+								var accountId = partner[0].property_account_receivable_id;
+								order1[0].account_id = accountId;
+								var params = {
+									partner_id : partnerId,
+									account_id : accountId[0],
+									origin : order1[0].id,
+									amount_total_signed : order1[0].amount_total
+								};
+								odoo.create("account.invoice", params, function (err, invoiceId) {
+									try {
+										if (err) { 
+											emitter.emit('error', errMsg, '', model, node);
+											return;  
+										} else {
+											order1[0].invoice_id = invoiceId;										
+											createInvoiceLines(odoo, order1[0], node);
+										}
+									} catch(e) {
+										emitter.emit('error',e.message, e.stack, '', node);
+									}
+								});
+							});
+						});
+					});
+				});
+			} catch(e) {
+				emitter.emit('error',e.message, e.stack, '', node);
+			}
+		});
+	} catch(e) {
+		emitter.emit('error', e.message, e.stack, '', node);
+	}
+}
+
+function createInvoiceLines(odoo, order, node) {
+	try {
+		var reqObj = node.reqData;
+		var resArr = [];
+		odoo.connect(function (err, res) {
+			try {
+				if (err) { 
+					emitter.emit('error', errMsg, '', model, node);
+					return;  
+				}
+				var length = order.order_line.length;
+				async.forEach(order.order_line, function(obj) {
+					var params = {
+						partner_id : order.partner_id[0],
+						account_id : order.account_id[0],
+						origin : order.name,
+						product_id : obj.product_id[0],
+						name : obj.name,
+						price_unit : obj.price_unit,
+						quantity : obj.product_uom_qty,
+						invoice_id : order.invoice_id
+					}
+					odoo.create('account.invoice.line', params, function(err, invoiceLine) {
+						if (err) { 
+							emitter.emit('error', errMsg, '', model, node);
+							return;  
+						} else {	
+							length--;
+							resArr.push(invoiceLine);
+							if(length == 0) {
+								var costParam = {
+									partner_id : order.partner_id[0],
+									account_id : order.account_id[0],
+									origin : order.name,
+									name : 'Shipping cost',
+									price_unit : reqObj.shippingAmount,
+									quantity : 1,
+									invoice_id : order.invoice_id
+								};
+								odoo.create('account.invoice.line', costParam, function(err, invoiceLastLine) {
+									try {
+										if (err) { 
+											emitter.emit('error', errMsg, '', model, node);
+											return; 
+										} else {
+											resArr.push(invoiceLastLine);
+											order.invoiceLine = resArr;
+											updateInvoice(odoo, order, node);
+										}
+									} catch(e) {
+										emitter.emit('error',e.message, e.stack, '', node);
+									}
+								});
+							}
+						}
+					});
+				});				
+			} catch(e) {
+				emitter.emit('error',e.message, e.stack, '', node);
+			}
+		});
+	} catch(e) {
+		emitter.emit('error', e.message, e.stack, '', node);
+	}
+}
+
+function updateInvoice(odoo, order, node) {
+	try {		
+		odoo.connect(function (err, res) {
+			try {
+				if (err) { 
+					emitter.emit('error', errMsg, '', model, node);
+					return;
+				}
+				var invoiceLineIds = '';
+				for(var i = 0; i < order.invoiceLine.length; i++) {
+					if(i == order.invoiceLine.length-1) {
+						invoiceLineIds += order.invoiceLine[i];
+					} else {
+						invoiceLineIds += order.invoiceLine[i] + ',';
+					}
+				}
+				var params = {
+					ids : order.invoice_id,
+					invoice_line_ids : invoiceLineIds,
+					state : 'paid'
+				};
+	           odoo.update('account.invoice', order.invoice_id, params, function (err, updateInvoice) {
+	               try { 
+	               		if (err) { 
+							emitter.emit('error', errMsg, '', model, node);
+							return;
+		                } else {
+			               	var msg;
+			               	if(updateInvoice == true) {
+			               		msg = "Invoice for the Order " + order.id + " has been creadted successfully in Odoo";
+			               		post(updateInvoice, node, msg);
+			               	} else {
+			               		msg = "Something went wrong. Invoice for the Odoo order " + order.id + " has not been created.";
+			               		emitter.emit('error', msg, '', model, node);
+			               	}
+		                }
+	               } catch(e) {
+	               	emitter.emit('error',e.message, e.stack, '', node);
+	               }
+	           });
+			} catch(e) {
+				emitter.emit('error',e.message, e.stack, '', node);
+			}
+		});
+	} catch(e) {
+		emitter.emit('error', e.message, e.stack, '', node);
+	}
+}
+
+function updateOdooObject(odoo, type, node) {
+	try {
+		var reqObj = node.reqData;
+		model = 'sale.order';
+		if(type == 'repair order') {
+			model = 'mrp.repair';
+		}
+		odoo.connect(function (err, res) {  
+			try { 
+				if (err) { 
+					emitter.emit('error', errMsg, '', model, node);
+					return; 
+				}
+				var params = {
+					domain : [['name','=', reqObj.orderNo]]
+				};
+				odoo.search(model, params, function(err, orderId) {
+					if(err) {
+						emitter.emit('error', errMsg, '', model, node);
+						return; 
+					}					
+					params = {
+						model : model,
+						method : 'write',
+						kwargs : {
+							context : res.user_context
+						},
+						args : [
+						orderId[0],
+						{
+							x_shipping_cost: parseFloat(reqObj.shippingAmount),
+							x_tracking_number: reqObj.trackingNumber
+						}
+						]
+					};
+					odoo.rpc_call('/web/dataset/call_kw', params, function (err, updateOrder) {
+						try { 
+							if (err) { 
+								emitter.emit('error', errMsg, '', model, node);
+								return; 
+							} else {
+								if(updateOrder == true) {
+									var msg = "Order with the id " + orderId[0] + " has been updated successfully in Odoo";
+			               			post(id, node, msg);
+								} else {
+									var msg = "Error while updating order " + orderId + " in Odoo";
+									emitter.emit('error', msg, '', model, node);
+								}
+							}
+						} catch(e) {
+							emitter.emit('error', e.message, e.stack, '', node);
+						}
+					});
+				});						
 			} catch(e) {
 				emitter.emit('error', e.message, e.stack, '', node);
 			}
