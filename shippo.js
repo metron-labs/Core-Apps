@@ -972,12 +972,14 @@ function postShipment(url, orderObj, transObj, tag, node) {
 				mass_unit : massUnit,
 				metadata : 'Order ID ' + orderObj.order_number
 			},			
-			customs_declaration : orderObj.customDeclId,
 			reference_1 : orderObj.order_number,
 			reference_2 : "Order Number",
 			metadata : 'Order ID ' + orderObj.order_number,
 			async : false
 		};
+		if (orderObj.to_address.country.toLowerCase() != "us" ) {
+			postData.customs_declaration = orderObj.customDeclId;
+		}
 		var args = {
 			data : postData,
 			headers : { Authorization : 'ShippoToken ' + shippoToken,
