@@ -184,12 +184,17 @@ function formOrder(dataArr, oauth, node) {
 function getItems(dataArr, oauth, node) {
     try {
         var length = dataArr.length;
-        var items = [];
         var finalResArr = [];
+//        console.log("dataArr...............",dataArr);
         dataArr.forEach(function(obj) {
+//        	console.log("obj........",obj);
             var url = baseUrl +  'receipts/' + obj.name + '/transactions';
+//            console.log("outside url.....",url);
             setTimeout(function() {
+//                console.log("inside url.....",url); 
+//            	console.log("obj...inside........",obj);
                 oauth.get(url, token, tokenSecret, function(err, data, res) {
+                    var items = [];                	                        	
                     try {
                         if(err) {
                             length--;
@@ -206,8 +211,9 @@ function getItems(dataArr, oauth, node) {
                         } else {
                             var quantity = 0;
                             var response = JSON.parse(data);
-                            console.log("data......"+data);
-                            console.log("response %j",response );
+//                            console.log("data......"+data);
+//                            console.log("url....",url);
+//                            console.log("response..... %j",response );
                             if(!response.hasOwnProperty("results")){
                                 length--;
                                 return;
@@ -224,14 +230,20 @@ function getItems(dataArr, oauth, node) {
                                 items[i] = item;
                                 quantity += itemObj.quantity;
                             }
+//                            console.log("items......",items);
                             obj.items = items;
                             obj.name = obj.id;
                             obj.quantity = quantity;
+//                            console.log("obj.....%j",obj);
                             var count = finalResArr.length;
+//                            console.log(count);
                             finalResArr[count] = obj;
+//                            finalResArr.push(obj);
+//                        	console.log("finalResArr....obj insert.....%j",finalResArr);
                             length--;
                         }
                         if(length == 0) {
+//                        	console.log("finalResArr.........%j",finalResArr);
                             post(finalResArr, node, "");
                             if(page != null) {
                                 getStoreData(oauth, node);
@@ -260,7 +272,7 @@ function testApp(callback) {
         var oauth = new OAuth(requestUrl,authorizeUrl,consumerKey,consumerSecret, "1.0", null,
             "HMAC-SHA1", null, {Accept : "application/json"} );
         var url = 'https://openapi.etsy.com/v2/shops/' + shopId + '/receipts?page=1&limit=1';
-        console.log(url);
+//        console.log(url);
         var result;
         oauth.get(url, token, tokenSecret, function(err, data, res) {
             try {
